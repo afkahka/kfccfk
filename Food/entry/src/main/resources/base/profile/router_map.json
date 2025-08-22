@@ -1,0 +1,34 @@
+{
+  "routerMap": [
+    {
+      "name": "LoginPage",
+      "buildFunction": "LoginPageBuilder",
+      "pageSourceFile": "src/main/ets/pages/LoginPage.ets"
+    },
+    {
+      "name": "MainPage",
+      "buildFunction": "MainPageBuilder",
+      "pageSourceFile": "src/main/ets/pages/MainPage.ets"
+    },
+    {
+      "name": "AddressPage",
+      "buildFunction": "AddressPageBuilder",
+      "pageSourceFile": "src/main/ets/view/AddressPage.ets"
+    },
+    {
+      "name": "AddAddressPage",
+      "buildFunction": "AddAddressPageBuilder",
+      "pageSourceFile": "src/main/ets/view/AddAddressPage.ets"
+    },
+    {
+      "name": "CheckoutPage",
+      "buildFunction": "CheckoutPageBuilder",
+      "pageSourceFile": "src/main/ets/view/CheckoutPage.ets"
+    },
+    {
+      "name": "OrderDetailPage",
+      "buildFunction": "OrderDetailPageBuilder",
+      "pageSourceFile": "src/main/ets/view/OrderDetailPage.ets"
+    }
+  ]
+}

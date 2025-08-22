@@ -1,0 +1,22 @@
+# HarmonyOS/ArkTS/ohpm
+oh_modules/
+node_modules/
+
+# 构建产物
+build/
+**/build/
+
+# DevEco/IDE
+.idea/
+*.iml
+
+# Hvigor/缓存
+.hvigor/
+.hvigor-cache/
+
+# 预览/临时
+.preview/
+.DS_Store
+
+# 本地环境配置（如有）
+local.properties
