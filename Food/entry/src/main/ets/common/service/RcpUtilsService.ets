@@ -44,6 +44,16 @@ export interface NewAddressData {
 	house_number: string
 }
 
+// 用户信息更新接口
+export interface UserProfileUpdateData {
+  name?: string
+  telephone?: string
+  avatar?: string
+}
+
+// 通用请求数据类型
+export type RequestData = NewAddressData | UserProfileUpdateData | Record<string, string | number | boolean>
+
 // 用户信息接口
 export interface User {
   id: number
@@ -126,7 +136,7 @@ export interface RightItem {
 }
 
 export class RcpUtilsService{
-	private static readonly BASE_URL: string = 'http://192.168.0.7:3000/api'
+	private static readonly BASE_URL: string = 'http://192.168.0.5:3000/api'
 
 	private static async getRequest<T>(path: string): Promise<T> {
 		const client: http.HttpRequest = http.createHttp()
@@ -137,48 +147,44 @@ export class RcpUtilsService{
 				connectTimeout: 6000,
 				readTimeout: 6000
 			}
-			
-			console.info(`getRequest: 开始请求 ${RcpUtilsService.BASE_URL}${path}`)
-			
+
 			const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
-			
-			console.info(`getRequest: 请求路径 ${path}, 响应状态码: ${response.responseCode}`)
-			
+
 			// 检查HTTP状态码 - GET请求可以接受200(成功)或201(创建成功)
 			if (response.responseCode !== 200 && response.responseCode !== 201) {
 				console.error(`getRequest: HTTP错误 ${response.responseCode}`)
 				throw new Error(`HTTP错误: ${response.responseCode}`)
 			}
-			
+
 			let resultString: string = ''
 			if (typeof response.result === 'string') {
 				resultString = response.result as string
 			} else if (response.result !== undefined && response.result !== null) {
 				resultString = String(response.result)
 			}
-			
-			console.info(`getRequest: 响应内容: ${resultString}`)
-			
+
+
+
 			if (!resultString) {
 				console.warn('getRequest: 响应为空')
 				throw new Error('响应为空')
 			}
-			
+
 			let parsed: ApiResponse<T>
 			try {
 				parsed = JSON.parse(resultString) as ApiResponse<T>
-				console.info(`getRequest: 解析后的数据:`, parsed)
+
 			} catch (parseError) {
 				console.error(`getRequest: JSON解析失败:`, parseError)
 				console.error(`getRequest: 原始响应:`, resultString)
 				throw new Error(`JSON解析失败: ${parseError}`)
 			}
-			
+
 			if (!parsed || !parsed.success) {
 				console.warn('getRequest: 响应不成功:', parsed)
 				throw new Error('响应不成功')
 			}
-			
+
 			return parsed.data
 		} catch (error) {
 			console.error(`getRequest: 请求失败 ${path}:`, error)
@@ -317,7 +323,7 @@ export class RcpUtilsService{
 		}
 	}
 
-	private static async postRequest<T>(path: string, data: NewAddressData): Promise<T> {
+	private static async postRequest<T, D extends RequestData = RequestData>(path: string, data: D): Promise<T> {
 		const client: http.HttpRequest = http.createHttp()
 		try {
 			const requestOptions: http.HttpRequestOptions = {
@@ -330,48 +336,44 @@ export class RcpUtilsService{
 				readTimeout: 6000,
 				extraData: JSON.stringify(data)
 			}
-			
-			console.info(`postRequest: 开始请求 ${RcpUtilsService.BASE_URL}${path}`)
-			
+
 			const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
-			
-			console.info(`postRequest: 请求路径 ${path}, 响应状态码: ${response.responseCode}`)
-			
+
 			// 检查HTTP状态码 - POST请求可以接受200(成功)或201(创建成功)
 			if (response.responseCode !== 200 && response.responseCode !== 201) {
 				console.error(`postRequest: HTTP错误 ${response.responseCode}`)
 				throw new Error(`HTTP错误: ${response.responseCode}`)
 			}
-			
+
 			let resultString: string = ''
 			if (typeof response.result === 'string') {
 				resultString = response.result as string
 			} else if (response.result !== undefined && response.result !== null) {
 				resultString = String(response.result)
 			}
-			
-			console.info(`postRequest: 响应内容: ${resultString}`)
-			
+
+
+
 			if (!resultString) {
 				console.warn('postRequest: 响应为空')
 				throw new Error('响应为空')
 			}
-			
+
 			let parsed: ApiResponse<T>
 			try {
 				parsed = JSON.parse(resultString) as ApiResponse<T>
-				console.info(`postRequest: 解析后的数据:`, parsed)
+
 			} catch (parseError) {
 				console.error(`postRequest: JSON解析失败:`, parseError)
 				console.error(`postRequest: 原始响应:`, resultString)
 				throw new Error(`JSON解析失败: ${parseError}`)
 			}
-			
+
 			if (!parsed || !parsed.success) {
 				console.warn('postRequest: 响应不成功:', parsed)
 				throw new Error('响应不成功')
 			}
-			
+
 			return parsed.data
 		} catch (error) {
 			console.error(`postRequest: 请求失败 ${path}:`, error)
@@ -386,9 +388,11 @@ export class RcpUtilsService{
 		}
 	}
 
-	private static async putRequest<T>(path: string, data: NewAddressData): Promise<T> {
+	private static async putRequest<T, D extends RequestData = RequestData>(path: string, data: D): Promise<T> {
 		const client: http.HttpRequest = http.createHttp()
 		try {
+
+			
 			const requestOptions: http.HttpRequestOptions = {
 				method: http.RequestMethod.PUT,
 				header: new Map<string, string>([
@@ -399,48 +403,47 @@ export class RcpUtilsService{
 				readTimeout: 6000,
 				extraData: JSON.stringify(data)
 			}
-			
-			console.info(`putRequest: 开始请求 ${RcpUtilsService.BASE_URL}${path}`)
-			
+
+
+
 			const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
-			
-			console.info(`putRequest: 请求路径 ${path}, 响应状态码: ${response.responseCode}`)
-			
+
+
+
 			// 检查HTTP状态码 - PUT请求可以接受200(成功)或201(创建成功)
 			if (response.responseCode !== 200 && response.responseCode !== 201) {
 				console.error(`putRequest: HTTP错误 ${response.responseCode}`)
 				throw new Error(`HTTP错误: ${response.responseCode}`)
 			}
-			
+
 			let resultString: string = ''
 			if (typeof response.result === 'string') {
 				resultString = response.result as string
 			} else if (response.result !== undefined && response.result !== null) {
 				resultString = String(response.result)
 			}
-			
-			console.info(`putRequest: 响应内容: ${resultString}`)
-			
+
+
+
 			if (!resultString) {
 				console.warn('putRequest: 响应为空')
 				throw new Error('响应为空')
 			}
-			
+
 			let parsed: ApiResponse<T>
 			try {
 				parsed = JSON.parse(resultString) as ApiResponse<T>
-				console.info(`putRequest: 解析后的数据:`, parsed)
 			} catch (parseError) {
 				console.error(`putRequest: JSON解析失败:`, parseError)
 				console.error(`putRequest: 原始响应:`, resultString)
 				throw new Error(`JSON解析失败: ${parseError}`)
 			}
-			
+
 			if (!parsed || !parsed.success) {
 				console.warn('putRequest: 响应不成功:', parsed)
 				throw new Error('响应不成功')
 			}
-			
+
 			return parsed.data
 		} catch (error) {
 			console.error(`putRequest: 请求失败 ${path}:`, error)
@@ -472,7 +475,7 @@ export class RcpUtilsService{
 	// 保存地址
 	static async saveAddress(addressData: NewAddressData): Promise<Address> {
 		try {
-			const response = await RcpUtilsService.postRequest<Address>('/address', addressData)
+			const response = await RcpUtilsService.postRequest<Address, NewAddressData>('/address', addressData)
 			return response
 		} catch (error) {
 			console.error('保存地址失败:', error)
@@ -481,10 +484,9 @@ export class RcpUtilsService{
 	}
 
 	// 更新地址
-		// 更新地址
 	static async updateAddress(addressId: number, addressData: NewAddressData): Promise<Address> {
 		try {
-			const response = await RcpUtilsService.putRequest<Address>(`/address/${addressId}`, addressData)
+			const response = await RcpUtilsService.putRequest<Address, NewAddressData>(`/address/${addressId}`, addressData)
 			return response
 		} catch (error) {
 			console.error('更新地址失败:', error)
@@ -495,33 +497,26 @@ export class RcpUtilsService{
 	// 获取用户列表
 	static async fetchUsers(): Promise<User[]> {
 		try {
-			console.info('fetchUsers: 开始获取用户列表')
 			const users = await RcpUtilsService.getRequest<User[]>('/user')
-			console.info(`fetchUsers: 成功获取 ${users.length} 个用户`)
-			
+
 			// 验证返回的数据
 			if (!Array.isArray(users)) {
-				console.warn('fetchUsers: 返回的数据不是数组:', users)
 				return []
 			}
-			
+
 			// 验证每个用户对象
 			const validUsers = users.filter(user => {
 				if (!user || typeof user !== 'object') {
-					console.warn('fetchUsers: 无效的用户对象:', user)
 					return false
 				}
 				if (!user.id || !user.name || !user.telephone) {
-					console.warn('fetchUsers: 用户对象缺少必要字段:', user)
 					return false
 				}
 				return true
 			})
-			
-			console.info(`fetchUsers: 有效用户数量: ${validUsers.length}`)
+
 			return validUsers
 		} catch (error) {
-			console.error('fetchUsers: 获取用户列表失败:', error)
 			// 返回空数组而不是抛出错误，避免登录功能完全失效
 			return []
 		}
@@ -530,29 +525,27 @@ export class RcpUtilsService{
 	// 根据手机号获取用户信息
 	static async getUserByPhone(phoneNumber: string): Promise<User | null> {
 		try {
-			console.info('getUserByPhone: 开始查找手机号:', phoneNumber)
 			const users = await RcpUtilsService.fetchUsers()
-			console.info('getUserByPhone: 获取到用户列表，数量:', users.length)
 
 			if (users.length === 0) {
-				console.warn('getUserByPhone: 用户列表为空')
 				return null
 			}
 
 			const user = users.find(user => user.telephone === phoneNumber)
-			console.info('getUserByPhone: 找到的用户:', user)
-
-			if (user) {
-				console.info('getUserByPhone: 成功找到用户，姓名:', user.name, '手机号:', user.telephone, '头像:', user.avatar)
-			} else {
-				console.warn('getUserByPhone: 未找到匹配的用户，手机号:', phoneNumber)
-				console.info('getUserByPhone: 所有用户的手机号:', users.map(u => u.telephone))
-			}
 
 			return user || null
 		} catch (error) {
-			console.error('getUserByPhone: 根据手机号获取用户信息失败:', error)
 			return null
+		}
+	}
+
+	// 更新用户信息
+	static async updateUserProfile(userId: number, userData: UserProfileUpdateData): Promise<User> {
+		try {
+			const response = await RcpUtilsService.putRequest<User, UserProfileUpdateData>(`/user/${userId}`, userData)
+			return response
+		} catch (error) {
+			throw new Error('更新用户信息失败')
 		}
 	}
 }

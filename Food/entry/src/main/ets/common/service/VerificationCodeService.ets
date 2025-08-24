@@ -296,7 +296,7 @@ export interface VerifyResult {
 }
 
 // 验证账号格式结果接口
-interface ValidationResult {
+export interface ValidationResult {
   isValid: boolean
   message: string
 }

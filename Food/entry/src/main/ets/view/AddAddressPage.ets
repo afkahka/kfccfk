@@ -1,6 +1,7 @@
 import { RcpUtilsService, NewAddressData, Address } from '../common/service/RcpUtilsService'
 import { AddressEditService } from '../common/service/AddressEditService'
 import { LoginStateService } from '../common/service/LoginStateService'
+import { VerificationCodeService, ValidationResult } from '../common/service/VerificationCodeService'
 
 @Builder
 export function AddAddressPageBuilder() {
@@ -22,15 +23,16 @@ export struct AddAddressPage {
   @State phoneNumber: string = ''
   @State address: string = ''
   @State houseNumber: string = ''
+  // 手机号验证相关状态
+  @State phoneValidation: ValidationResult = { isValid: true, message: '' }
+  @State showPhoneError: boolean = false
 
   aboutToAppear() {
-    console.info('AddAddressPage aboutToAppear - 检查编辑状态')
     // 从全局服务获取编辑数据
     const editAddress = AddressEditService.getEditAddress()
     const isEditMode = AddressEditService.isInEditMode()
 
     if (isEditMode && editAddress && editAddress.id) {
-      console.info('AddAddressPage: 进入编辑模式，地址ID:', editAddress.id)
       this.isEditMode = true
       this.editAddressId = editAddress.id
       this.contactPerson = editAddress.contact_person || ''
@@ -38,13 +40,9 @@ export struct AddAddressPage {
       this.phoneNumber = editAddress.phone_number || ''
       this.address = editAddress.address || ''
       this.houseNumber = editAddress.house_number || ''
-      console.info('AddAddressPage: 数据填充完成:', {
-        contactPerson: this.contactPerson,
-        phoneNumber: this.phoneNumber,
-        address: this.address
-      })
+      // 验证初始手机号
+      this.validatePhoneNumber(this.phoneNumber)
     } else {
-      console.info('AddAddressPage: 新增模式')
       // 确保新增模式下所有字段都是空的
       this.isEditMode = false
       this.editAddressId = 0
@@ -57,13 +55,11 @@ export struct AddAddressPage {
   }
 
   onPageShow() {
-    console.info('AddAddressPage onPageShow - 检查编辑状态')
     // 页面显示时再次检查编辑数据，确保数据能正确加载
     const editAddress = AddressEditService.getEditAddress()
     const isEditMode = AddressEditService.isInEditMode()
 
     if (isEditMode && editAddress && editAddress.id) {
-      console.info('AddAddressPage onPageShow: 进入编辑模式')
       this.isEditMode = true
       this.editAddressId = editAddress.id
       this.contactPerson = editAddress.contact_person || ''
@@ -71,8 +67,9 @@ export struct AddAddressPage {
       this.phoneNumber = editAddress.phone_number || ''
       this.address = editAddress.address || ''
       this.houseNumber = editAddress.house_number || ''
+      // 验证初始手机号
+      this.validatePhoneNumber(this.phoneNumber)
     } else if (!this.isEditMode) {
-      console.info('AddAddressPage onPageShow: 确保新增模式')
       // 确保新增模式下所有字段都是空的
       this.isEditMode = false
       this.editAddressId = 0
@@ -116,9 +113,7 @@ export struct AddAddressPage {
 
             this.buildGenderRow()
 
-            this.buildFormRow('手机号', '请填写收货人手机号', this.phoneNumber, (value: string) => {
-              this.phoneNumber = value
-            })
+            this.buildPhoneRow()
 
             this.buildFormRow('地址', '请填写收货人地址', this.address, (value: string) => {
               this.address = value
@@ -180,6 +175,64 @@ export struct AddAddressPage {
       Divider()
         .width('100%')
         .color('#F0F0F0')
+        .margin({ top: 0 })
+    }
+    .width('100%')
+  }
+
+  // 验证手机号
+  validatePhoneNumber(phone: string): void {
+    // 使用现有的验证服务
+    this.phoneValidation = VerificationCodeService.validateAccountFormat(phone)
+    this.showPhoneError = !this.phoneValidation.isValid && phone.length > 0
+  }
+
+  // 构建手机号输入行
+  @Builder
+  buildPhoneRow() {
+    Column() {
+      Row() {
+        Text('手机号')
+          .fontSize(16)
+          .fontColor('#333333')
+          .fontWeight(FontWeight.Medium)
+          .width(80)
+
+        TextInput({
+          placeholder: '请填写收货人手机号',
+          text: this.phoneNumber
+        })
+          .layoutWeight(1)
+          .fontSize(16)
+          .fontColor(this.showPhoneError ? '#FF3B30' : '#222222')
+          .backgroundColor(Color.Transparent)
+          .onChange((value: string) => {
+            this.phoneNumber = value
+            this.validatePhoneNumber(value)
+          })
+          .onBlur(() => {
+            // 失去焦点时显示错误（如果有的话）
+            if (this.phoneNumber.length > 0) {
+              this.showPhoneError = !this.phoneValidation.isValid
+            }
+          })
+      }
+      .width('100%')
+      .padding({ top: 8, bottom: 12 })
+
+      // 错误提示
+      if (this.showPhoneError) {
+        Text(this.phoneValidation.message)
+          .fontSize(12)
+          .fontColor('#FF3B30')
+          .alignSelf(ItemAlign.Start)
+          .margin({ top: 4, left: 80 })
+      }
+
+      // 分割线
+      Divider()
+        .width('100%')
+        .color(this.showPhoneError ? '#FF3B30' : '#F0F0F0')
         .margin({ top: 0 })
     }
     .width('100%')
@@ -274,19 +327,27 @@ export struct AddAddressPage {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor('#F5F5F5')
+    .backgroundColor(Color.White)
   }
 
   // 检查是否可以提交
   canSubmit(): boolean {
     return this.contactPerson.trim() !== '' &&
       this.phoneNumber.trim() !== '' &&
+      this.phoneValidation.isValid &&
       this.address.trim() !== ''
     // 门牌号可以为空，所以不在这里验证
   }
 
   // 提交地址
   async submitAddress() {
+    // 提交前再次验证手机号
+    this.validatePhoneNumber(this.phoneNumber)
+    if (!this.phoneValidation.isValid) {
+      this.showPhoneError = true
+      return
+    }
+    
     if (!this.canSubmit()) {
       return
     }
@@ -310,7 +371,6 @@ export struct AddAddressPage {
           confirm: {
             value: '确定',
             action: () => {
-              console.info('地址更新成功')
               // 设置需要刷新标志
               AddressEditService.setNeedRefresh()
               // 触发地址变更事件
@@ -331,7 +391,6 @@ export struct AddAddressPage {
           confirm: {
             value: '确定',
             action: () => {
-              console.info('地址保存成功')
               // 设置需要刷新标志
               AddressEditService.setNeedRefresh()
               // 触发地址变更事件

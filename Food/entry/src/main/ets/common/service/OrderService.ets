@@ -26,10 +26,12 @@ export class OrderService {
     try {
       PersistentStorage.persistProp(OrderService.KEY_ORDERS, '[]')
     } catch (_e) {
+
     }
     try {
       PersistentStorage.persistProp(OrderService.KEY_ORDERS_TS, 0)
     } catch (_e) {
+
     }
     const json = AppStorage.get<string>(OrderService.KEY_ORDERS)
     const savedAt = AppStorage.get<number>(OrderService.KEY_ORDERS_TS) || 0

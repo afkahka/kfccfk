@@ -15,7 +15,6 @@ export struct AddressPage {
   @State isLoading: boolean = true
   // 监听地址变更以便及时刷新
   private addressChangedHandler: () => void = () => {
-    console.info('AddressPage: 收到地址变更事件，刷新列表')
     this.loadAddresses()
   }
 

@@ -47,7 +47,6 @@ export struct OrderPage {
   async aboutToAppear() {
     try {
       this.categories = await RcpUtilsService.fetchCoffeeCategories()
-      console.info(`OrderPage categories count=${this.categories.length}`)
       if (this.categories.length > 0) {
         this.activeCategoryId = this.categories[0].id
       }
@@ -57,10 +56,6 @@ export struct OrderPage {
       this.filteredCoffees = this.allCoffees
       this.coffees = this.filterByCategory(this.activeCategoryId)
       this.rebuildFlatList()
-      console.info(`OrderPage coffees count=${this.coffees.length}`)
-      if (this.coffees.length > 0) {
-        console.info(`OrderPage first coffee=${JSON.stringify(this.coffees[0])}`)
-      }
       // 读取已选地址并注册监听
       this.selectedAddress = AddressEditService.getSelectedAddress()
       AddressEditService.addAddressChangeListener(this.addressChangedHandler)

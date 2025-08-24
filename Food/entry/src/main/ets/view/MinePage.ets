@@ -1,15 +1,17 @@
 import { LoginStateService } from '../common/service/LoginStateService'
 import { RcpUtilsService, MemberLevel, RightCategory, RightItem } from '../common/service/RcpUtilsService'
+import MainPageViewModel, { MineIcon } from '../viewmodel/MainPageViewModel'
+
 
 @Component
 export struct MinePage {
   @StorageProp('topSafeHeight') topSafeHeight: number = 0
   @StorageProp('bottomSafeHeight') bottomSafeHeight: number = 0
   @State isLoading: boolean = true
-  @State userName: string = ''
-  @State userPhone: string = ''
-  @State userAvatar: string = ''
-  @State userLevelType: number = 0
+  @StorageLink('userName') userName: string = ''
+  @StorageLink('userPhone') userPhone: string = ''
+  @StorageLink('userAvatar') userAvatar: string = ''
+  @StorageLink('userLevelType') userLevelType: number = 0
   @State memberLevels: MemberLevel[] = []
   @State levelSwiperIndex: number = 0
   @State rightsOfActiveLevel: RightItem[] = []
@@ -17,18 +19,23 @@ export struct MinePage {
   @State activeCategory: number = 0
   @State rightsByCategory: RightItem[] = []
   @State unlockedCount: number = 0
+  @Consume('pathStack') pathStack: NavPathStack
 
   aboutToAppear() {
     this.initFromLoginState()
     this.loadAll()
   }
 
+  onPageShow() {
+    // 当页面重新显示时，同步用户信息
+    console.info('MinePage: 页面重新显示，同步用户信息')
+    this.initFromLoginState()
+  }
+
   initFromLoginState() {
+    // 使用@StorageLink后，数据会自动同步，这里只需要同步存储数据
     LoginStateService.syncStorageData()
-    this.userName = LoginStateService.getUserName()
-    this.userPhone = LoginStateService.getUserPhone()
-    this.userAvatar = LoginStateService.getUserAvatar()
-    this.userLevelType = LoginStateService.getUserLevelType()
+
   }
 
   async loadAll() {
@@ -181,6 +188,76 @@ export struct MinePage {
     .margin({ right: 12 })
   }
 
+  @Builder
+  otherServices() {
+    Column() {
+      // 标题区域
+      Row() {
+        Text('其他服务')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#333')
+        Blank().layoutWeight(1)
+      }
+      .width('100%')
+      .padding({
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: 12
+      })
+
+      // 服务图标网格
+      Grid() {
+        ForEach(MainPageViewModel.getMineIcon(), (item: MineIcon) => {
+          GridItem() {
+            this.serviceItem(item)
+          }
+        }, (item: MineIcon, index: number) => JSON.stringify(index + item.id))
+      }
+      .columnsTemplate('1fr 1fr 1fr')
+      .columnsGap(16)
+      .rowsGap(16)
+      .padding({ left: 16, right: 16, bottom: 16 })
+    }
+    .width('100%')
+    .backgroundColor(Color.White)
+    .margin({ top: 10 })
+  }
+
+  // 单个服务项
+  @Builder
+  serviceItem(item: MineIcon) {
+    Column() {
+      // 图标容器
+      Row() {
+        Image(item.image)
+          .width(32)
+          .height(32)
+          .fillColor('#666666')
+      }
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .margin({ bottom: 8 })
+
+      // 标题文字
+      Text(item.title)
+        .fontSize(14)
+        .fontColor('#333333')
+        .fontWeight(FontWeight.Medium)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .padding({ top: 12, bottom: 12 })
+    .onClick(() => {
+      if (item.id === 1) {
+        this.pathStack.pushPathByName("Setting", null)
+      } else {
+        console.info(`点击了${item.title}`)
+      }
+    })
+  }
+
   build() {
     Column() {
       // 顶部用户信息
@@ -296,6 +373,8 @@ export struct MinePage {
       .width('100%')
       .backgroundColor(Color.White)
       .margin({ top: 10 })
+
+      this.otherServices()
 
       Blank().layoutWeight(1)
     }

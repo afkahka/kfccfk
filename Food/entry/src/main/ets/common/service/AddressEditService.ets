@@ -16,7 +16,6 @@ export class AddressEditService {
   static setEditAddress(address: Address): void {
     AddressEditService.editAddress = address
     AddressEditService.isEditMode = true
-    console.info('AddressEditService: 设置编辑地址:', address)
   }
 
   /**
@@ -38,7 +37,6 @@ export class AddressEditService {
    */
   static setNeedRefresh(): void {
     AddressEditService.needRefresh = true
-    console.info('AddressEditService: 设置需要刷新标志')
   }
 
   /**
@@ -62,7 +60,6 @@ export class AddressEditService {
     AddressEditService.editAddress = null
     AddressEditService.isEditMode = false
     AddressEditService.needRefresh = true // 编辑完成后需要刷新
-    console.info('AddressEditService: 清除编辑状态，设置刷新标志')
   }
 
   /**
@@ -83,7 +80,6 @@ export class AddressEditService {
    * 触发地址变更事件
    */
   static emitAddressChanged(): void {
-    console.info('AddressEditService: 触发地址变更事件')
     AddressEditService.addressChangeListeners.forEach(listener => {
       try {
         listener()
@@ -107,8 +103,8 @@ export class AddressEditService {
       AppStorage.setOrCreate(AddressEditService.KEY_ADDRESS_TS, ts)
       PersistentStorage.persistProp(AddressEditService.KEY_ADDRESS_TS, ts)
     } catch (_e) {
+
     }
-    console.info('AddressEditService: 设置选中地址:', address)
   }
 
   /**
@@ -122,10 +118,12 @@ export class AddressEditService {
     try {
       PersistentStorage.persistProp(AddressEditService.KEY_SELECTED_ADDRESS, '')
     } catch (_e) {
+
     }
     try {
       PersistentStorage.persistProp(AddressEditService.KEY_ADDRESS_TS, 0)
     } catch (_e) {
+
     }
     const json = AppStorage.get<string>(AddressEditService.KEY_SELECTED_ADDRESS)
     const savedAt = AppStorage.get<number>(AddressEditService.KEY_ADDRESS_TS) || 0
@@ -143,6 +141,7 @@ export class AddressEditService {
       try {
         AddressEditService.selectedAddress = JSON.parse(json) as Address
       } catch (_e) {
+        
       }
     }
     return AddressEditService.selectedAddress
@@ -155,7 +154,6 @@ export class AddressEditService {
     AddressEditService.selectedAddress = null
     AppStorage.setOrCreate(AddressEditService.KEY_SELECTED_ADDRESS, '')
     PersistentStorage.persistProp(AddressEditService.KEY_SELECTED_ADDRESS, '')
-    console.info('AddressEditService: 清除选中地址')
   }
 }
 

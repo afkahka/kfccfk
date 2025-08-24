@@ -29,6 +29,16 @@
       "name": "OrderDetailPage",
       "buildFunction": "OrderDetailPageBuilder",
       "pageSourceFile": "src/main/ets/view/OrderDetailPage.ets"
+    },
+    {
+      "name": "Setting",
+      "buildFunction": "SettingBuilder",
+      "pageSourceFile": "src/main/ets/view/Setting.ets"
+    },
+    {
+      "name": "ProfileEditPage",
+      "buildFunction": "ProfileEditPageBuilder",
+      "pageSourceFile": "src/main/ets/view/ProfileEditPage.ets"
     }
   ]
 }

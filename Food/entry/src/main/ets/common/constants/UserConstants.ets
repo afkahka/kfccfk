@@ -8,7 +8,7 @@ export class UserConstants {
   static readonly PRIVACY_POSTION: number[] = [192, 38]
   static readonly BUTTON_COLOR: string = 'rgba(0, 0, 0, 0.05)'
   static readonly AGREED_STATE: number[] = [0, 1]
-  static readonly ROUTER: string[] = ['LoginPage', 'MainPage']
+  static readonly ROUTER: string[] = ['LoginPage', 'MainPage', 'SettingPage']
   static readonly DELAY_TIME: number = 500
   static readonly AGREEMENT_DETAIL: string[] = [
     '应用市场用户协议\n\n更新日期：2021年12月31日\n\n1 关于我们\n\n',

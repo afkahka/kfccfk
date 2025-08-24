@@ -115,6 +115,22 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { name, telephone } = req.body;
     
+    // 验证参数，防止 undefined 值
+    if (name === undefined || telephone === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: '姓名和电话号码不能为空'
+      });
+    }
+    
+    // 检查参数是否为空字符串
+    if (!name.trim() || !telephone.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: '姓名和电话号码不能为空'
+      });
+    }
+    
     const [result] = await pool.execute(
       'UPDATE user SET name = ?, telephone = ? WHERE id = ?',
       [name, telephone, id]

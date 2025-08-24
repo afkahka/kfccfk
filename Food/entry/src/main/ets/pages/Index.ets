@@ -73,8 +73,6 @@ struct Index {
 
   // 处理同意后的状态重置
   handleAgree(): void {
-    console.info('用户点击同意，开始处理状态重置')
-
     // 先更新状态
     this.agreedState = UserConstants.AGREED_STATE[1];
     this.isShow = false;
@@ -84,12 +82,9 @@ struct Index {
     // 强制更新状态
     this.flag = false;
 
-    console.info('状态已重置，agreedState:', this.agreedState, 'isShow:', this.isShow)
-
     // 延迟跳转，确保状态更新完成
     setTimeout(() => {
       try {
-        console.info('开始页面跳转')
         this.pathStack.replacePathByName(UserConstants.ROUTER[0], null)
       } catch (error) {
         console.error('页面跳转失败:', error)

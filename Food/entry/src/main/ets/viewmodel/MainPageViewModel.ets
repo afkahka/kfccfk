@@ -22,6 +22,18 @@ export class MenberIcon {
   }
 }
 
+export class MineIcon {
+  id: number
+  image: Resource | string
+  title: string
+
+  constructor(id: number, image: Resource | string, title: string) {
+    this.id = id
+    this.image = image
+    this.title = title
+  }
+}
+
 export class MainPageViewModel {
   private bannerImage: Images[] = [
     new Images(1, $r('app.media.banner_1')),
@@ -34,6 +46,11 @@ export class MainPageViewModel {
     new MenberIcon(3, $r('app.media.ic_store'), '雪王魔法铺', '0元兑周边'),
     new MenberIcon(4, $r('app.media.ic_cc'), '礼品卡', '送TA心意'),
   ]
+  private mineIcon: MineIcon[] = [
+    new MineIcon(1, $r('app.media.ic_setting'), '设置'),
+    new MineIcon(2, $r('app.media.ic_privacy_policy'), '隐私政策'),
+    new MineIcon(3, $r('app.media.ic_help'), '帮助')
+  ]
 
   getBannerImage() {
     return this.bannerImage
@@ -41,6 +58,10 @@ export class MainPageViewModel {
 
   getMenberIcon() {
     return this.menberIcon
+  }
+
+  getMineIcon() {
+    return this.mineIcon
   }
 }
 
