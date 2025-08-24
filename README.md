@@ -6,6 +6,7 @@
 
 - ArkTS/ArkUI 项目结构（`entry` 模块）
 - 构建与配置文件：`hvigorfile.ts`、`oh-package.json5`、`build-profile.json5` 等
+- API版本为19
 
 ## 页面与导航
 
@@ -104,5 +105,4 @@
 ## 构建与运行（简述）
 
 请使用 DevEco Studio 或命令行按 OpenHarmony/ArkUI 标准流程构建与运行本工程；依赖配置见仓库根目录与 `entry` 模块内的 `oh-package.json5`、`build-profile.json5` 等文件。
-
 
