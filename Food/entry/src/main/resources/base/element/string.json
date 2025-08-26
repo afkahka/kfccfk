@@ -11,6 +11,10 @@
     {
       "name": "EntryAbility_label",
       "value": "蜜瑞雪咖"
+    },
+    {
+      "name": "permission_reason_avatar",
+      "value": "用于选择用户头像照片"
     }
   ]
 }

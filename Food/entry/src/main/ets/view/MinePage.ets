@@ -27,13 +27,11 @@ export struct MinePage {
   }
 
   onPageShow() {
-    // 当页面重新显示时，同步用户信息
     console.info('MinePage: 页面重新显示，同步用户信息')
     this.initFromLoginState()
   }
 
   initFromLoginState() {
-    // 使用@StorageLink后，数据会自动同步，这里只需要同步存储数据
     LoginStateService.syncStorageData()
 
   }
@@ -49,7 +47,6 @@ export struct MinePage {
   }
 
   async loadLevelsAndRights() {
-    // 等级列表，定位当前等级索引
     const levels = await RcpUtilsService.fetchMemberLevels()
     this.memberLevels = levels
 
@@ -81,16 +78,13 @@ export struct MinePage {
     this.unlockedCount = rights.length
     this.rightsOfActiveLevel = rights
 
-    // 下方列表切换为该等级的“主权益”，与卡片保持一致
     try {
       const mainRights = await RcpUtilsService.fetchMainRightsByLevel(this.userLevelType)
       this.rightsByCategory = mainRights
     } catch (_e) {
-      // 兜底：使用全部权益的前几项
       this.rightsByCategory = rights.slice(0, 10)
     }
 
-    // 重置分类为第一个，并刷新分类数据
     try {
       const cats = await RcpUtilsService.fetchRightCategories()
       this.rightCategories = cats
@@ -101,7 +95,6 @@ export struct MinePage {
         this.activeCategory = 0
       }
     } catch (_e) {
-      // 分类接口失败时保持主权益
     }
   }
 
@@ -114,7 +107,6 @@ export struct MinePage {
     }
   }
 
-  // 等级主题色映射：1-微雪花(蓝)、2-小雪球(橙)、3-小雪人(紫)、4-冰雪王(深色)
   private getLevelBg(levelType: number): string {
     switch (levelType) {
       case 1:
@@ -130,11 +122,9 @@ export struct MinePage {
     }
   }
 
-  // 等级卡片
   @Builder
   levelCard(level: MemberLevel) {
     Column() {
-      // 顶部标题 + 副标题（左对齐）
       Column() {
         Text(level.name || '会员')
           .fontSize(22)
@@ -152,17 +142,14 @@ export struct MinePage {
       .width('100%')
       .alignItems(HorizontalAlign.End)
 
-      // 右侧插画位（此处使用内置图标占位）
       Image($r('app.media.ic_gift')).width(80).height(80).alignSelf(ItemAlign.End)
 
-      // 底部边框圆角
     }
     .padding(16)
     .backgroundColor(this.getLevelBg(level.level_type))
     .borderRadius(12)
   }
 
-  // 权益卡片
   @Builder
   rightItemCard(item: RightItem) {
     Column() {
@@ -191,7 +178,6 @@ export struct MinePage {
   @Builder
   otherServices() {
     Column() {
-      // 标题区域
       Row() {
         Text('其他服务')
           .fontSize(16)
@@ -207,7 +193,6 @@ export struct MinePage {
         bottom: 12
       })
 
-      // 服务图标网格
       Grid() {
         ForEach(MainPageViewModel.getMineIcon(), (item: MineIcon) => {
           GridItem() {
@@ -225,22 +210,19 @@ export struct MinePage {
     .margin({ top: 10 })
   }
 
-  // 单个服务项
   @Builder
   serviceItem(item: MineIcon) {
     Column() {
-      // 图标容器
       Row() {
         Image(item.image)
-          .width(32)
-          .height(32)
+          .width(24)
+          .aspectRatio(1)
           .fillColor('#666666')
       }
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
       .margin({ bottom: 8 })
 
-      // 标题文字
       Text(item.title)
         .fontSize(14)
         .fontColor('#333333')
@@ -260,7 +242,6 @@ export struct MinePage {
 
   build() {
     Column() {
-      // 顶部用户信息
       Row() {
         Image(this.userAvatar || $r('app.media.ic_mine_new_selected'))
           .width(40).height(40).borderRadius(20)
@@ -295,7 +276,6 @@ export struct MinePage {
       })
       .backgroundColor(Color.White)
 
-      // 等级轮播（当前等级为默认项，可左右查看其它等级）
       Column() {
         if (this.memberLevels && this.memberLevels.length > 0) {
           Swiper() {
@@ -320,7 +300,6 @@ export struct MinePage {
       .width('100%')
       .backgroundColor('#FFF6E6')
 
-      // “您已解锁X项特权” 与 分类 + 列表
       Column() {
         Row() {
           Text('会员权益')
@@ -336,7 +315,6 @@ export struct MinePage {
           bottom: 6
         })
 
-        // 分类 Tabs
         Row({ space: 10 }) {
           ForEach(this.rightCategories, (c: RightCategory) => {
             Text(c.category_name)
@@ -356,7 +334,6 @@ export struct MinePage {
         .width('100%')
         .padding({ left: 12, right: 12, bottom: 8 })
 
-        // 权益列表
         List() {
           ForEach(this.rightsByCategory, (r: RightItem) => {
             ListItem() {

@@ -9,6 +9,7 @@ const coffeeRoutes = require('./routes/coffee');
 const userRoutes = require('./routes/user');
 const addressRoutes = require('./routes/address');
 const memberRoutes = require('./routes/member');
+const orderRoutes = require('./routes/order');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/coffee', coffeeRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/address', addressRoutes);
 app.use('/api/member', memberRoutes);
+app.use('/api/order', orderRoutes);
 
 // 根路径
 app.get('/', (req, res) => {
@@ -71,6 +73,7 @@ app.listen(PORT, () => {
   console.log(`- 用户接口: http://localhost:${PORT}/api/user`);
   console.log(`- 地址接口: http://localhost:${PORT}/api/address`);
   console.log(`- 会员接口: http://localhost:${PORT}/api/member`);
+  console.log(`- 订单接口: http://localhost:${PORT}/api/order`);
 });
 
 module.exports = app;

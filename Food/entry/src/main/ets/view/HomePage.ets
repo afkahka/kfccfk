@@ -12,6 +12,13 @@ export struct HomePage {
   @State isLoggedIn: boolean = false
   @State memberLevelName: string = ''
   @State userLevelType: number = 0
+  @State userCoins: number = 0
+  @State userCoupons: number = 0
+  @State userGrowthValue: number = 0
+  @State levelGrowthMin: number = 0
+  @State levelGrowthMax: number = 100
+  @State levelProgress: number = 0 // 0~1
+  @State memberRightText: string = ''
   @Prop currentIndex: number = 0
   onTabChange?: (index: number) => void
 
@@ -20,16 +27,33 @@ export struct HomePage {
     this.loadUserPreferences()
   }
 
+  onPageShow() {
+    this.loadUserPreferences()
+    this.loadMemberRightText()
+  }
+
   async loadUserPreferences() {
     try {
-      // 先同步持久化数据
       LoginStateService.syncStorageData()
       this.lastAccount = LoginStateService.getLastLoginAccount()
       this.userName = LoginStateService.getUserName()
       this.userAvatar = LoginStateService.getUserAvatar()
       this.isLoggedIn = LoginStateService.isUserLoggedIn()
       this.userLevelType = LoginStateService.getUserLevelType()
+      if (this.isLoggedIn) {
+        const phone = LoginStateService.getUserPhone()
+        if (phone) {
+          const user = await RcpUtilsService.getUserByPhone(phone)
+          if (user) {
+            this.userCoins = Number(user.coins ?? 0)
+            this.userCoupons = Number(user.coupons ?? 0)
+            this.userGrowthValue = Number(user.growth_value ?? 0)
+            this.updateLevelProgress()
+          }
+        }
+      }
       this.loadMemberLevelName()
+      this.loadMemberRightText()
     } catch (error) {
       console.error('HomePage: 获取用户登录状态失败:', error)
     }
@@ -40,14 +64,75 @@ export struct HomePage {
       if (this.userLevelType && this.userLevelType > 0) {
         const detail = await RcpUtilsService.fetchMemberLevelDetail(this.userLevelType)
         this.memberLevelName = detail?.name ?? ''
+        if (detail) {
+          this.levelGrowthMin = Number(detail.growth_value_min ?? 0)
+          this.levelGrowthMax = Number(detail.growth_value_max ?? 100)
+          this.updateLevelProgress()
+        }
       }
       if (!this.memberLevelName) {
         const levels = await RcpUtilsService.fetchMemberLevels()
         const match = levels.find(l => l.level_type === this.userLevelType)
         this.memberLevelName = match ? match.name : (levels.length > 0 ? (levels[0].name || '') : '')
+        if (match) {
+          this.levelGrowthMin = Number(match.growth_value_min ?? 0)
+          this.levelGrowthMax = Number(match.growth_value_max ?? 100)
+          this.updateLevelProgress()
+        }
       }
     } catch (e) {
       this.memberLevelName = ''
+    }
+  }
+
+  updateLevelProgress() {
+    const min: number = Math.max(0, this.levelGrowthMin)
+    const max: number = Math.max(min + 1, this.levelGrowthMax)
+    const gv: number = Math.max(0, this.userGrowthValue)
+    const ratio: number = Math.min(1, Math.max(0, (gv - min) / (max - min)))
+    this.levelProgress = ratio
+
+    if (ratio >= 1 && this.userLevelType > 0) {
+      this.tryPromoteLevel()
+    }
+  }
+
+  async tryPromoteLevel() {
+    try {
+      const levels = await RcpUtilsService.fetchMemberLevels()
+      const idx = levels.findIndex(l => l.level_type === this.userLevelType)
+      const next = idx >= 0 && idx + 1 < levels.length ? levels[idx + 1] : null
+      if (next) {
+        const updated = await RcpUtilsService.updateUserLevel(LoginStateService.getUserId(), next.level_type)
+        if (updated) {
+          LoginStateService.setUserLevelType(next.level_type)
+          this.userLevelType = next.level_type
+          this.memberLevelName = next.name
+          this.levelGrowthMin = Number(next.growth_value_min ?? 0)
+          this.levelGrowthMax = Number(next.growth_value_max ?? 100)
+          this.updateLevelProgress()
+        }
+      }
+    } catch (_e) {}
+  }
+
+  async loadMemberRightText() {
+    try {
+      if (this.userLevelType && this.userLevelType > 0) {
+        const rights = await RcpUtilsService.fetchMainRightsByLevel(this.userLevelType)
+        if (rights && rights.length > 0) {
+          const first = rights.find(r => r.showInMainPage) || rights[0]
+          this.memberRightText = first.assistDesc || first.name || ''
+          return
+        }
+      }
+      const byCategory = await RcpUtilsService.fetchRightsByCategory(1)
+      if (byCategory && byCategory.length > 0) {
+        const first = byCategory.find(r => r.showInMainPage) || byCategory[0]
+        this.memberRightText = first.assistDesc || first.name || ''
+      }
+    } catch (_e) {
+      this.memberRightText = ''
     }
   }
 
@@ -65,7 +150,7 @@ export struct HomePage {
             },(item:Images,index:number)=>JSON.stringify(item.id+index))
           }
           .loop(true)
-          .autoPlay(false)
+          .autoPlay(true)
           .indicator(false)
 
           Row(){
@@ -146,7 +231,6 @@ export struct HomePage {
     })
   }
 
-  // 会员信息头部布局骨架
   @Builder
   memberHeaderBuilder(){
     Column(){
@@ -185,7 +269,7 @@ export struct HomePage {
         Blank().height(6).layoutWeight(1).backgroundColor('#FFE4E4').borderRadius(3)
         Row(){ Blank() }
           .height(6)
-          .width('60%')
+          .width(`${Math.round(this.levelProgress * 100)}%`)
           .backgroundColor('#FF5252')
           .borderRadius(3)
           .position({ x: 0 })
@@ -194,11 +278,11 @@ export struct HomePage {
       .margin({ top: 8 })
 
       Row(){
-        Column(){ Text('637').fontSize(18).fontColor('#222222'); Text('雪王币').fontSize(12).fontColor('#888888') }
+        Column(){ Text(String(this.userCoins)).fontSize(18).fontColor('#222222'); Text('雪王币').fontSize(12).fontColor('#888888') }
           .alignItems(HorizontalAlign.Center).layoutWeight(1)
-        Column(){ Text('0').fontSize(18).fontColor('#222222'); Text('优惠券').fontSize(12).fontColor('#888888') }
+        Column(){ Text(String(this.userCoupons)).fontSize(18).fontColor('#222222'); Text('优惠券').fontSize(12).fontColor('#888888') }
           .alignItems(HorizontalAlign.Center).layoutWeight(1)
-        Column(){ Text('—').fontSize(18).fontColor('#222222'); Text('其他').fontSize(12).fontColor('#888888') }
+        Column(){ Text(String(this.userGrowthValue)).fontSize(18).fontColor('#222222'); Text('成长值').fontSize(12).fontColor('#888888') }
           .alignItems(HorizontalAlign.Center).layoutWeight(1)
       }
       .width('100%')
@@ -206,7 +290,7 @@ export struct HomePage {
 
       Row(){
         Text('会员特权').fontSize(16).fontColor('#222222').fontWeight(FontWeight.Medium)
-        Text('周三会员日，满12元减2元').fontSize(14).fontColor('#666666').margin({ left: 8 }).layoutWeight(1)
+        Text(this.memberRightText || '').fontSize(14).fontColor('#666666').margin({ left: 8 }).layoutWeight(1)
         Text('>').fontSize(16).fontColor('#C0C0C0')
       }
       .width('100%')

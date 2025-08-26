@@ -16,7 +16,6 @@ export struct OrderListPage {
   build() {
     NavDestination() {
       Column() {
-        // 顶部标题
         Row() {
           Text('订单')
             .fontSize(18)
@@ -29,7 +28,6 @@ export struct OrderListPage {
         .backgroundColor(Color.White)
         .border({ width: { bottom: 1 }, color: '#F0F0F0' })
 
-        // 列表 + 下拉刷新
         Refresh({ refreshing: this.refreshing }) {
           List() {
             ForEach(this.orders, (o: OrderRecord) => {
@@ -44,9 +42,7 @@ export struct OrderListPage {
         .layoutWeight(1)
         .onRefreshing(() => {
           this.refreshing = true
-          // 从服务读取最新列表
           this.orders = OrderService.getOrders()
-          // 结束刷新动画
           setTimeout(() => {
             this.refreshing = false
           }, 500)
@@ -86,7 +82,7 @@ export struct OrderListPage {
       Row() {
         Text(this.formatTime(o.createdAt)).fontSize(12).fontColor('#999999')
         Blank().layoutWeight(1)
-        Text(`共${o.items.length}件  ￥${o.totalAmount.toFixed(0)}`).fontSize(12).fontColor('#999999')
+        Text(`共${o.items.length}件  ￥${o.totalAmount.toFixed(2)}`).fontSize(12).fontColor('#999999')
       }
       .width('100%').padding({ left: 12, right: 12, top: 6 })
 
@@ -103,7 +99,6 @@ export struct OrderListPage {
           })
           .borderRadius(20)
           .onClick(() => {
-            // 预填结算数据，避免地址为空
             CheckoutService.setCheckoutData(o.address, o.items, o.totalAmount)
             this.pathStack.pushPathByName('CheckoutPage', null)
           })

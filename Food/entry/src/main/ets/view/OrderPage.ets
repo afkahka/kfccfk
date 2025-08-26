@@ -10,7 +10,6 @@ interface FlatNode {
   item?: CoffeeItem
 }
 
-// 为结算跳转参数提供显式类型，满足 ArkTS 对对象字面量的要求
 interface CheckoutItemParam {
   id: number
   title: string
@@ -51,12 +50,10 @@ export struct OrderPage {
         this.activeCategoryId = this.categories[0].id
       }
 
-      // 拉取全部商品，前端根据 parentId 进行分组筛选
       this.allCoffees = await RcpUtilsService.fetchCoffees()
       this.filteredCoffees = this.allCoffees
       this.coffees = this.filterByCategory(this.activeCategoryId)
       this.rebuildFlatList()
-      // 读取已选地址并注册监听
       this.selectedAddress = AddressEditService.getSelectedAddress()
       AddressEditService.addAddressChangeListener(this.addressChangedHandler)
     } catch (e) {
@@ -65,7 +62,6 @@ export struct OrderPage {
   }
 
   onPageShow() {
-    // 从地址页返回后尝试同步选中地址
     const addr = AddressEditService.getSelectedAddress()
     if (addr) {
       this.selectedAddress = addr
@@ -104,7 +100,6 @@ export struct OrderPage {
     this.flatList = flat
   }
 
-  // 按关键字过滤（在所有分类内搜索标题）
   private applyFilters(): void {
     const query: string = (this.searchQuery || '').trim().toLowerCase()
     if (query === '') {
@@ -159,7 +154,6 @@ export struct OrderPage {
 
   build() {
     Column() {
-      // 顶部：地址与搜索
       Row() {
         Column() {
           Row() {
@@ -173,7 +167,6 @@ export struct OrderPage {
           .margin({ bottom: 10 })
 
           if (this.selectedAddress) {
-            // 已选择地址：主行显示一行，过长省略
             Text(this.formatShortAddress(this.selectedAddress))
               .fontSize(18)
               .fontWeight(FontWeight.Medium)
@@ -213,9 +206,7 @@ export struct OrderPage {
       .backgroundColor(Color.White)
       .border({ width: 1, color: '#F0F0F0' })
 
-      // 主体：左侧分类 + 右侧商品
       Row() {
-        // 左侧分类
         List() {
           ForEach(this.categories, (cat: CoffeeCategory) => {
             ListItem() {
@@ -258,10 +249,8 @@ export struct OrderPage {
         .height('100%')
         .backgroundColor(Color.White)
 
-        // 右侧：分组标签 + 商品列表（含分组头，支持滚动联动）
         Column() {
           if (this.activeCategoryId !== null) {
-            // 顶部分组标题（更简洁）
             Row() {
               Text((this.categories.find((c: CoffeeCategory) => c.id ===
               this.activeCategoryId) as CoffeeCategory)?.title || '')
@@ -285,7 +274,6 @@ export struct OrderPage {
               ListItem() {
                 if (node.type === 'header') {
                   Row() {
-                    // 左侧强调色条
                     Row() {
                     }
                     .width(3)
@@ -414,10 +402,8 @@ export struct OrderPage {
       .alignItems(VerticalAlign.Top)
       .backgroundColor('#F5F5F5')
 
-      // 底部购物车栏
       Row() {
         Row() {
-          // 购物车图标与数量
           Image($r('app.media.shop_car')).width(20).aspectRatio(1).objectFit(ImageFit.Cover)
           if (this.totalCount > 0) {
             Text(String(this.totalCount))
@@ -496,7 +482,6 @@ export struct OrderPage {
       return
     }
 
-    // 准备结算数据并跳转，无付款弹窗
     const items: CheckoutItemParam[] = Array.from(this.cartMap.entries()).map((entry) => {
       const id: number = entry[0]
       const count: number = entry[1]
@@ -511,11 +496,9 @@ export struct OrderPage {
       return resultItem
     })
     CheckoutService.setCheckoutData(this.selectedAddress as Address, items, this.totalPrice)
-    // 清空购物车
     this.cartMap = new Map<number, number>()
     this.totalCount = 0
     this.totalPrice = 0
-    // 跳转到结算页
     this.pathStack.pushPathByName('CheckoutPage', null, true)
   }
 }

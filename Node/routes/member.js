@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../database');
+const MembershipService = require('../services/membership');
 
 // 根路径：返回该模块的可用接口
 router.get('/', async (req, res) => {
@@ -13,7 +14,11 @@ router.get('/', async (req, res) => {
 			rightCategories: '/api/member/right-categories',
 			rights: '/api/member/rights?category=1',
 			levelRights: '/api/member/levels/:levelType/rights',
-			levelMainRights: '/api/member/levels/:levelType/main-rights'
+			levelMainRights: '/api/member/levels/:levelType/main-rights',
+			coins: '/api/member/:userId/coins',
+			growth: '/api/member/:userId/growth',
+			orderPaid: '/api/member/:userId/on-order-paid',
+			multipliers: '/api/member/multipliers'
 		}
 	});
 });
@@ -116,6 +121,128 @@ router.get('/levels/:levelType/main-rights', async (req, res) => {
 	}
 });
 
+// 读取用户雪王币余额
+router.get('/:userId/coins', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const coins = await MembershipService.getUserCoins(userId);
+    res.json({ success: true, data: { coins }, message: '获取雪王币成功' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// 增加雪王币
+router.post('/:userId/coins/add', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { delta } = req.body;
+    const coins = await MembershipService.addCoins(userId, delta);
+    res.json({ success: true, data: { coins }, message: '雪王币增加成功' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// 读取成长值与等级
+router.get('/:userId/growth', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const growth = await MembershipService.getUserGrowth(userId);
+    const [u] = await pool.execute('SELECT level_type FROM user WHERE id = ?', [userId]);
+    const level_type = u.length ? u[0].level_type : null;
+    res.json({ success: true, data: { growth, level_type }, message: '获取成长值成功' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// 增加成长值并重算等级
+router.post('/:userId/growth/add', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { delta } = req.body;
+    const info = await MembershipService.addGrowth(userId, delta);
+    res.json({ success: true, data: info, message: '成长值增加并重算等级成功' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// 订单支付完成：累计币与成长值，并重算等级
+router.post('/:userId/on-order-paid', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { amount } = req.body;
+    if (amount === undefined) {
+      return res.status(400).json({ success: false, message: '缺少 amount 参数' });
+    }
+    const result = await MembershipService.onOrderPaid(userId, amount);
+    res.json({ success: true, data: result, message: '订单支付处理完成' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// 查看等级成长加成系数
+router.get('/multipliers', async (req, res) => {
+  try {
+    const data = await MembershipService.loadLevelMultipliers();
+    res.json({ success: true, data, message: '获取成长加成系数成功' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
+
+// 今日会员特权文案：根据 member_right_rule 和 weekday 计算
+router.get('/rights/today', async (req, res) => {
+  try {
+    const { level_type } = req.query;
+    if (!level_type) {
+      return res.status(400).json({ success: false, message: '缺少 level_type 参数' });
+    }
+
+    const weekday = new Date().getDay(); // 0-6
+
+    const [rows] = await pool.execute(
+      `SELECT * FROM member_right_rule 
+       WHERE level_type = ? AND weekday = ? AND status = 'active'
+       ORDER BY priority ASC, id ASC LIMIT 1`,
+      [level_type, weekday]
+    );
+
+    if (rows.length === 0) {
+      return res.json({ success: true, data: null, message: '今日无特权规则' });
+    }
+
+    const rule = rows[0];
+    let text;
+    if (rule.type === 'percentage') {
+      text = `今日会员日：${(Number(rule.percent_off) / 10).toFixed(1)}折`;
+    } else if (rule.type === 'fixed') {
+      text = `今日会员日：立减￥${Number(rule.discount_amount).toFixed(2)}`;
+    } else if (rule.type === 'threshold_cut') {
+      text = `今日会员日：满￥${Number(rule.threshold_amount).toFixed(2)}减￥${Number(rule.discount_amount).toFixed(2)}`;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        text,
+        type: rule.type,
+        percent_off: rule.percent_off,
+        discount_amount: rule.discount_amount,
+        threshold_amount: rule.threshold_amount,
+        weekday
+      },
+      message: '获取今日会员特权成功'
+    });
+  } catch (error) {
+    console.error('获取今日会员特权失败:', error);
+    res.status(500).json({ success: false, message: '获取今日会员特权失败', error: error.message });
+  }
+});
 
 

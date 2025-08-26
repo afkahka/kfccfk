@@ -1,4 +1,6 @@
 import { Address } from "../common/service/RcpUtilsService"
+import { RcpUtilsService } from "../common/service/RcpUtilsService"
+import { LoginStateService } from "../common/service/LoginStateService"
 import { CheckoutService, CheckoutItemData } from "../common/service/CheckoutService"
 import { OrderService } from "../common/service/OrderService"
 
@@ -25,21 +27,43 @@ export struct CheckoutPage {
   @State totalAmount: number = 0
   @State payMethod: 'wechat' | 'alipay' = 'wechat'
   @State isExpanded: boolean = false
+  // 雪王币抵扣
+  @State userCoins: number = 0
+  @State useCoins: boolean = false
+  @State discountByCoins: number = 0
 
   aboutToAppear() {
-    // 从服务中读取结算数据
     const addr = CheckoutService.getAddress()
     const list = CheckoutService.getItems() as CheckoutItemData[]
     const amount = CheckoutService.getTotalAmount()
     this.address = addr
     this.items = list
     this.totalAmount = amount
+    try {
+      const userId = LoginStateService.getUserId()
+      if (userId) {
+        RcpUtilsService.getUserById(userId).then((u)=>{
+          this.userCoins = Number(u?.coins ?? 0)
+          this.recalcDiscount()
+        })
+      }
+    } catch (_e) {}
+  }
+  // 计算雪王币抵扣
+  recalcDiscount() {
+    if (!this.useCoins || this.userCoins <= 0) {
+      this.discountByCoins = 0
+      return
+    }
+    // 支持不足100币的按比例折算（如63币=¥0.63）
+    const maxDiscountByCoins = this.userCoins / 100
+    const payable = Math.max(0, this.totalAmount)
+    this.discountByCoins = Math.min(maxDiscountByCoins, payable)
   }
 
   build() {
     NavDestination() {
       Column() {
-        // 顶部标题栏
         Row() {
           Image($r('app.media.back')).width(24).height(24).onClick(() => this.pathStack.pop())
           Text('订单结算')
@@ -53,7 +77,6 @@ export struct CheckoutPage {
         .padding({ left: 16, right: 16, top: this.getUIContext().px2vp(this.topSafeHeight) })
         .backgroundColor('#C8A07B')
 
-        // 配送地址（左对齐）
         Column() {
           Text('配送')
             .fontSize(18)
@@ -74,7 +97,6 @@ export struct CheckoutPage {
         .backgroundColor(Color.White)
         .border({ width: { bottom: 1 }, color: '#F0F0F0' })
 
-        // 商品清单（展开/收起）
         Column() {
           ForEach(this.items.slice(0, this.isExpanded ? this.items.length : Math.min(2, this.items.length)),
             (it: CheckoutItem) => {
@@ -117,7 +139,6 @@ export struct CheckoutPage {
         .backgroundColor(Color.White)
         .margin({ top: 10 })
 
-        // 优惠券占位
         Row() {
           Text('优惠券').fontSize(16).fontColor('#222222')
           Blank().layoutWeight(1)
@@ -133,11 +154,31 @@ export struct CheckoutPage {
         .backgroundColor(Color.White)
         .margin({ top: 8 })
 
-        // 统计
+        // 雪王币抵扣
+        Row() {
+          Row(){
+            Text('雪王币抵扣').fontSize(16).fontColor('#222222')
+            if (this.userCoins > 0) {
+              Text(`可用${this.userCoins}币，100币抵1元`).fontSize(12).fontColor('#999999').margin({ left: 8 })
+            } else {
+              Text('暂无可用').fontSize(12).fontColor('#BBBBBB').margin({ left: 8 })
+            }
+          }.layoutWeight(1)
+          Toggle({ type: ToggleType.Switch, isOn: this.useCoins })
+            .onChange((on:boolean)=>{
+              this.useCoins = on && this.userCoins > 0
+              this.recalcDiscount()
+            })
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+        .backgroundColor(Color.White)
+        .margin({ top: 8 })
+
         Row() {
           Blank().layoutWeight(1)
           Text(`共${this.items.reduce((sum: number, it: CheckoutItem) => sum + it.count,
-            0)}件，合计 ¥ ${this.totalAmount.toFixed(2)}`)
+            0)}件，合计 ¥ ${this.totalAmount.toFixed(2)}，抵扣 ¥ ${this.discountByCoins.toFixed(2)}`)
             .fontSize(16)
             .fontColor('#222222')
         }
@@ -152,7 +193,6 @@ export struct CheckoutPage {
         .border({ width: { top: 1 }, color: '#F5F5F5' })
         .margin({ bottom: 10 })
 
-        // 支付方式（左文左图，右侧选择框）
         Column() {
           Text('支付方式').fontSize(16).fontColor('#222222').fontWeight(FontWeight.Medium).textAlign(TextAlign.Start)
           Row() {
@@ -199,9 +239,8 @@ export struct CheckoutPage {
 
         Blank().layoutWeight(1)
 
-        // 底部支付栏
         Row() {
-          Text(`实付: ¥ ${this.totalAmount.toFixed(2)}`).fontSize(16).fontColor('#222222')
+          Text(`实付: ¥ ${(Math.max(0, this.totalAmount - this.discountByCoins)).toFixed(2)}`).fontSize(16).fontColor('#222222')
           Blank().layoutWeight(1)
           Button('确认支付')
             .backgroundColor('#C8A07B')
@@ -213,10 +252,26 @@ export struct CheckoutPage {
               bottom: 10
             })
             .borderRadius(22)
-            .onClick(() => {
-              // 生成订单记录
+            .onClick(async () => {
               const rec = OrderService.createFromCheckout(this.payMethod)
-              // 跳转订单详情或订单列表
+              try {
+                const userId = LoginStateService.getUserId()
+                if (userId && this.totalAmount > 0) {
+                  const usedCoins = this.useCoins ? Math.min(this.userCoins, this.totalAmount * 100) : 0
+                  if (usedCoins > 0) {
+                    await RcpUtilsService.resetUserCoinsToZero(userId)
+                  }
+                  const payAmount: number = Math.max(0, this.totalAmount - usedCoins / 100)
+                  const coinsDelta: number = Math.floor(payAmount)
+                  const growthDelta: number = Math.floor(this.totalAmount)
+                  await RcpUtilsService.incrementUserStats(userId, coinsDelta, growthDelta)
+                }
+              } catch (_e) {}
+              try {
+                if (this.address) {
+                  CheckoutService.setCheckoutData(this.address, this.items as CheckoutItemData[], this.totalAmount, this.discountByCoins)
+                }
+              } catch (_e) {}
               this.pathStack.replacePathByName('OrderDetailPage', null, true)
             })
         }

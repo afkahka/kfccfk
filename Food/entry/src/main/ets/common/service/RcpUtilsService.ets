@@ -1,4 +1,5 @@
 import { http } from '@kit.NetworkKit'
+import { LoginStateService } from './LoginStateService'
 
 export interface ApiResponse<T> {
   success: boolean
@@ -6,71 +7,92 @@ export interface ApiResponse<T> {
 }
 
 export interface CoffeeCategory {
-	id: number
-	title: string
-	desc: string
-	indexImg: string | null
+  id: number
+  title: string
+  desc: string
+  indexImg: string | null
 }
 
 export interface CoffeeItem {
-	id: number
-	title: string
-	price: number
-	oldprice: number
-	image: string
-	parentId: number
+  id: number
+  title: string
+  price: number
+  oldprice: number
+  image: string
+  parentId: number
 }
 
-// 地址相关接口
 export interface Address {
-	id: number
-	user_id: number
-	contact_person: string
-	gender: string
-	phone_number: string
-	address: string
-	house_number: string
-	created_at: string
-	updated_at: string
+  id: number
+  user_id: number
+  contact_person: string
+  gender: string
+  phone_number: string
+  address: string
+  house_number: string
+  created_at: string
+  updated_at: string
 }
 
-// 新增地址数据接口（不包含自动生成的字段）
 export interface NewAddressData {
-	user_id: number
-	contact_person: string
-	gender: string
-	phone_number: string
-	address: string
-	house_number: string
+  user_id: number
+  contact_person: string
+  gender: string
+  phone_number: string
+  address: string
+  house_number: string
 }
 
-// 用户信息更新接口
 export interface UserProfileUpdateData {
   name?: string
   telephone?: string
   avatar?: string
+  coins?: number
+  growth_value?: number
+  level_type?: number
+  // 新增：后端支持的增量更新字段
+  coins_delta?: number
+  growth_delta?: number
 }
 
-// 通用请求数据类型
-export type RequestData = NewAddressData | UserProfileUpdateData | Record<string, string | number | boolean>
+export interface AvatarUploadData {
+  userId: number
+  avatarBase64: string
+  timestamp: number
+}
 
-// 用户信息接口
+export interface AvatarUploadResponse {
+  success: boolean
+  message: string
+  avatarUrl?: string
+}
+
+export type RequestData = NewAddressData | UserProfileUpdateData | AvatarUploadData
+  | Record<string, string | number | boolean>
+
 export interface User {
   id: number
   name: string
   telephone: string
   avatar: string
   level_type?: number
+  coins?: number
+  growth_value?: number
+  coupons?: number
 }
 
-// 用户列表响应接口
 export interface UserListResponse {
   success: boolean
   data: User[]
   message: string
 }
 
-// 会员等级
+export interface UserStatsUpdateResponse {
+  coins?: number
+  growth?: number
+  level_type?: number
+}
+
 export interface MemberLevel {
   level_type: number
   name: string
@@ -90,7 +112,6 @@ export interface MemberEndpoints {
   levelMainRights: string
 }
 
-// 原始会员等级（服务端可能返回多种字段命名）
 export interface RawMemberLevel {
   id?: number
   level_type?: number
@@ -135,417 +156,455 @@ export interface RightItem {
   showInMainPage?: boolean
 }
 
-export class RcpUtilsService{
-	private static readonly BASE_URL: string = 'http://192.168.0.5:3000/api'
+export class RcpUtilsService {
+  private static readonly BASE_URL: string = 'http://192.168.0.6:3000/api'
 
-	private static async getRequest<T>(path: string): Promise<T> {
-		const client: http.HttpRequest = http.createHttp()
-		try {
-			const requestOptions: http.HttpRequestOptions = {
-				method: http.RequestMethod.GET,
-				header: new Map<string, string>([['Accept', 'application/json']]),
-				connectTimeout: 6000,
-				readTimeout: 6000
-			}
+  private static async getRequest<T>(path: string): Promise<T> {
+    const client: http.HttpRequest = http.createHttp()
+    try {
+      const requestOptions: http.HttpRequestOptions = {
+        method: http.RequestMethod.GET,
+        header: new Map<string, string>([['Accept', 'application/json']]),
+        connectTimeout: 6000,
+        readTimeout: 6000
+      }
 
-			const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
+      const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
 
-			// 检查HTTP状态码 - GET请求可以接受200(成功)或201(创建成功)
-			if (response.responseCode !== 200 && response.responseCode !== 201) {
-				console.error(`getRequest: HTTP错误 ${response.responseCode}`)
-				throw new Error(`HTTP错误: ${response.responseCode}`)
-			}
+      if (response.responseCode !== 200 && response.responseCode !== 201) {
+        console.error(`getRequest: HTTP错误 ${response.responseCode}`)
+        throw new Error(`HTTP错误: ${response.responseCode}`)
+      }
 
-			let resultString: string = ''
-			if (typeof response.result === 'string') {
-				resultString = response.result as string
-			} else if (response.result !== undefined && response.result !== null) {
-				resultString = String(response.result)
-			}
+      let resultString: string = ''
+      if (typeof response.result === 'string') {
+        resultString = response.result as string
+      } else if (response.result !== undefined && response.result !== null) {
+        resultString = String(response.result)
+      }
 
+      if (!resultString) {
+        console.warn('getRequest: 响应为空')
+        throw new Error('响应为空')
+      }
 
+      let parsed: ApiResponse<T>
+      try {
+        parsed = JSON.parse(resultString) as ApiResponse<T>
 
-			if (!resultString) {
-				console.warn('getRequest: 响应为空')
-				throw new Error('响应为空')
-			}
+      } catch (parseError) {
+        console.error(`getRequest: JSON解析失败:`, parseError)
+        console.error(`getRequest: 原始响应:`, resultString)
+        throw new Error(`JSON解析失败: ${parseError}`)
+      }
 
-			let parsed: ApiResponse<T>
-			try {
-				parsed = JSON.parse(resultString) as ApiResponse<T>
+      if (!parsed || !parsed.success) {
+        console.warn('getRequest: 响应不成功:', parsed)
+        throw new Error('响应不成功')
+      }
 
-			} catch (parseError) {
-				console.error(`getRequest: JSON解析失败:`, parseError)
-				console.error(`getRequest: 原始响应:`, resultString)
-				throw new Error(`JSON解析失败: ${parseError}`)
-			}
+      return parsed.data
+    } catch (error) {
+      console.error(`getRequest: 请求失败 ${path}:`, error)
+      if (error instanceof Error) {
+        throw error
+      } else {
+        throw new Error(`请求失败: ${String(error)}`)
+      }
+    } finally {
+      client.destroy()
+    }
+  }
 
-			if (!parsed || !parsed.success) {
-				console.warn('getRequest: 响应不成功:', parsed)
-				throw new Error('响应不成功')
-			}
+  static async fetchMemberEndpoints(): Promise<MemberEndpoints> {
+    return await RcpUtilsService.getRequest<MemberEndpoints>('/member')
+  }
 
-			return parsed.data
-		} catch (error) {
-			console.error(`getRequest: 请求失败 ${path}:`, error)
-			// 确保抛出的是Error对象
-			if (error instanceof Error) {
-				throw error
-			} else {
-				throw new Error(`请求失败: ${String(error)}`)
-			}
-		} finally {
-			client.destroy()
-		}
-	}
+  static async fetchMemberLevels(): Promise<MemberLevel[]> {
+    try {
+      const endpoints = await RcpUtilsService.fetchMemberEndpoints()
+      const levelsPath = endpoints?.levels ?? '/api/member/levels'
+      const raw = await RcpUtilsService.getRequest<RawMemberLevel[]>(levelsPath.replace('/api', ''))
+      return raw.map(RcpUtilsService.normalizeMemberLevel)
+    } catch (_e) {
+      const raw = await RcpUtilsService.getRequest<RawMemberLevel[]>('/member/levels')
+      return raw.map(RcpUtilsService.normalizeMemberLevel)
+    }
+  }
 
-	// 会员模块：获取服务端暴露的会员端点
-	static async fetchMemberEndpoints(): Promise<MemberEndpoints> {
-		return await RcpUtilsService.getRequest<MemberEndpoints>('/member')
-	}
+  static async fetchRightCategories(): Promise<RightCategory[]> {
+    try {
+      const endpoints = await RcpUtilsService.fetchMemberEndpoints()
+      let path = endpoints?.rightCategories || '/api/member/right-categories'
+      path = path.replace('/api', '')
+      return await RcpUtilsService.getRequest<RightCategory[]>(path)
+    } catch (_e) {
+      return await RcpUtilsService.getRequest<RightCategory[]>('/member/right-categories')
+    }
+  }
 
-	// 会员模块：获取会员等级列表
-	static async fetchMemberLevels(): Promise<MemberLevel[]> {
-		// 若服务端 `/member` 返回端点，再次请求 levels；否则允许直接 `/member/levels`
-		try {
-			const endpoints = await RcpUtilsService.fetchMemberEndpoints()
-			const levelsPath = endpoints?.levels ?? '/api/member/levels'
-			const raw = await RcpUtilsService.getRequest<RawMemberLevel[]>(levelsPath.replace('/api', ''))
-			return raw.map(RcpUtilsService.normalizeMemberLevel)
-		} catch (_e) {
-			// 兜底：直接按既定路径请求
-			const raw = await RcpUtilsService.getRequest<RawMemberLevel[]>('/member/levels')
-			return raw.map(RcpUtilsService.normalizeMemberLevel)
-		}
-	}
+  private static normalizeRightItem(input: RawRightItem): RightItem {
+    return {
+      id: input.id,
+      category: input.category,
+      name: input.right_name,
+      assistDesc: input.assist_desc,
+      image: input.imgs,
+      desc: input.right_desc,
+      dayOfWeek: input.day_of_week,
+      showInMainPage: input.show_in_main_page === 1
+    }
+  }
 
-	// 权益：分类列表
-	static async fetchRightCategories(): Promise<RightCategory[]> {
-		try {
-			const endpoints = await RcpUtilsService.fetchMemberEndpoints()
-			let path = endpoints?.rightCategories || '/api/member/right-categories'
-			path = path.replace('/api', '')
-			return await RcpUtilsService.getRequest<RightCategory[]>(path)
-		} catch (_e) {
-			return await RcpUtilsService.getRequest<RightCategory[]>('/member/right-categories')
-		}
-	}
+  static async fetchRightsByCategory(category: number): Promise<RightItem[]> {
+    try {
+      const endpoints = await RcpUtilsService.fetchMemberEndpoints()
+      let path = endpoints?.rights || '/api/member/rights?category='
+      if (path.includes('?category=')) {
+        path = `${path}${category}`
+      } else {
+        path = `${path}?category=${category}`
+      }
+      path = path.replace('/api', '')
+      const raw = await RcpUtilsService.getRequest<RawRightItem[]>(path)
+      return raw.map(RcpUtilsService.normalizeRightItem)
+    } catch (_e) {
+      const raw = await RcpUtilsService.getRequest<RawRightItem[]>(`/member/rights?category=${category}`)
+      return raw.map(RcpUtilsService.normalizeRightItem)
+    }
+  }
 
-	private static normalizeRightItem(input: RawRightItem): RightItem {
-		return {
-			id: input.id,
-			category: input.category,
-			name: input.right_name,
-			assistDesc: input.assist_desc,
-			image: input.imgs,
-			desc: input.right_desc,
-			dayOfWeek: input.day_of_week,
-			showInMainPage: input.show_in_main_page === 1
-		}
-	}
+  static async fetchRightsByLevel(levelType: number): Promise<RightItem[]> {
+    try {
+      const endpoints = await RcpUtilsService.fetchMemberEndpoints()
+      let path = endpoints?.levelRights || '/api/member/levels/:levelType/rights'
+      path = path.replace(':levelType', String(levelType)).replace('/api', '')
+      const raw = await RcpUtilsService.getRequest<RawRightItem[]>(path)
+      return raw.map(RcpUtilsService.normalizeRightItem)
+    } catch (_e) {
+      const raw = await RcpUtilsService.getRequest<RawRightItem[]>(`/member/levels/${levelType}/rights`)
+      return raw.map(RcpUtilsService.normalizeRightItem)
+    }
+  }
 
-	// 权益：按分类获取权益列表
-	static async fetchRightsByCategory(category: number): Promise<RightItem[]> {
-		try {
-			const endpoints = await RcpUtilsService.fetchMemberEndpoints()
-			let path = endpoints?.rights || '/api/member/rights?category='
-			if (path.includes('?category=')) {
-				path = `${path}${category}`
-			} else {
-				path = `${path}?category=${category}`
-			}
-			path = path.replace('/api', '')
-			const raw = await RcpUtilsService.getRequest<RawRightItem[]>(path)
-			return raw.map(RcpUtilsService.normalizeRightItem)
-		} catch (_e) {
-			const raw = await RcpUtilsService.getRequest<RawRightItem[]>(`/member/rights?category=${category}`)
-			return raw.map(RcpUtilsService.normalizeRightItem)
-		}
-	}
+  static async fetchMainRightsByLevel(levelType: number): Promise<RightItem[]> {
+    try {
+      const endpoints = await RcpUtilsService.fetchMemberEndpoints()
+      let path = endpoints?.levelMainRights || '/api/member/levels/:levelType/main-rights'
+      path = path.replace(':levelType', String(levelType)).replace('/api', '')
+      const raw = await RcpUtilsService.getRequest<RawRightItem[]>(path)
+      return raw.map(RcpUtilsService.normalizeRightItem)
+    } catch (_e) {
+      const raw = await RcpUtilsService.getRequest<RawRightItem[]>(`/member/levels/${levelType}/main-rights`)
+      return raw.map(RcpUtilsService.normalizeRightItem)
+    }
+  }
 
-	// 权益：指定等级全部权益
-	static async fetchRightsByLevel(levelType: number): Promise<RightItem[]> {
-		try {
-			const endpoints = await RcpUtilsService.fetchMemberEndpoints()
-			let path = endpoints?.levelRights || '/api/member/levels/:levelType/rights'
-			path = path.replace(':levelType', String(levelType)).replace('/api', '')
-			const raw = await RcpUtilsService.getRequest<RawRightItem[]>(path)
-			return raw.map(RcpUtilsService.normalizeRightItem)
-		} catch (_e) {
-			const raw = await RcpUtilsService.getRequest<RawRightItem[]>(`/member/levels/${levelType}/rights`)
-			return raw.map(RcpUtilsService.normalizeRightItem)
-		}
-	}
+  private static normalizeMemberLevel(input: RawMemberLevel): MemberLevel {
+    const levelType: number = input?.level_type ?? input?.levelType ?? 0
+    const name: string = input?.name ?? input?.level_name ?? input?.levelName ?? ''
+    const color: string | undefined = input?.color
+    return {
+      level_type: levelType,
+      name,
+      color,
+      growth_value_min: input?.growth_value_min,
+      growth_value_max: input?.growth_value_max,
+      current_level_txt: input?.current_level_txt ?? null,
+      next_level_txt: input?.next_level_txt ?? null
+    }
+  }
 
-	// 权益：指定等级主权益（用于“首页展示”）
-	static async fetchMainRightsByLevel(levelType: number): Promise<RightItem[]> {
-		try {
-			const endpoints = await RcpUtilsService.fetchMemberEndpoints()
-			let path = endpoints?.levelMainRights || '/api/member/levels/:levelType/main-rights'
-			path = path.replace(':levelType', String(levelType)).replace('/api', '')
-			const raw = await RcpUtilsService.getRequest<RawRightItem[]>(path)
-			return raw.map(RcpUtilsService.normalizeRightItem)
-		} catch (_e) {
-			const raw = await RcpUtilsService.getRequest<RawRightItem[]>(`/member/levels/${levelType}/main-rights`)
-			return raw.map(RcpUtilsService.normalizeRightItem)
-		}
-	}
+  static async fetchMemberLevelDetail(levelType: number): Promise<MemberLevel> {
+    try {
+      const endpoints = await RcpUtilsService.fetchMemberEndpoints()
+      let detailPath = endpoints?.levelDetail || '/api/member/levels/:levelType'
+      detailPath = detailPath.replace(':levelType', String(levelType))
+      if (detailPath.startsWith('/api/')) {
+        detailPath = detailPath.replace('/api', '')
+      }
+      const raw = await RcpUtilsService.getRequest<RawMemberLevel>(detailPath)
+      return RcpUtilsService.normalizeMemberLevel(raw)
+    } catch (_e) {
+      const raw = await RcpUtilsService.getRequest<RawMemberLevel>(`/member/levels/${levelType}`)
+      return RcpUtilsService.normalizeMemberLevel(raw)
+    }
+  }
 
-	private static normalizeMemberLevel(input: RawMemberLevel): MemberLevel {
-		const levelType: number = input?.level_type ?? input?.levelType ?? 0
-		const name: string = input?.name ?? input?.level_name ?? input?.levelName ?? ''
-		const color: string | undefined = input?.color
-		return {
-			level_type: levelType,
-			name,
-			color,
-			growth_value_min: input?.growth_value_min,
-			growth_value_max: input?.growth_value_max,
-			current_level_txt: input?.current_level_txt ?? null,
-			next_level_txt: input?.next_level_txt ?? null
-		}
-	}
+  private static async postRequest<T, D extends RequestData = RequestData>(path: string, data: D): Promise<T> {
+    const client: http.HttpRequest = http.createHttp()
+    try {
+      const requestOptions: http.HttpRequestOptions = {
+        method: http.RequestMethod.POST,
+        header: new Map<string, string>([
+          ['Accept', 'application/json'],
+          ['Content-Type', 'application/json']
+        ]),
+        connectTimeout: 6000,
+        readTimeout: 6000,
+        extraData: JSON.stringify(data)
+      }
 
-	// 会员模块：获取指定 levelType 的等级详情
-	static async fetchMemberLevelDetail(levelType: number): Promise<MemberLevel> {
-		try {
-			const endpoints = await RcpUtilsService.fetchMemberEndpoints()
-			let detailPath = endpoints?.levelDetail || '/api/member/levels/:levelType'
-			detailPath = detailPath.replace(':levelType', String(levelType))
-			if (detailPath.startsWith('/api/')) {
-				detailPath = detailPath.replace('/api', '')
-			}
-			const raw = await RcpUtilsService.getRequest<RawMemberLevel>(detailPath)
-			return RcpUtilsService.normalizeMemberLevel(raw)
-		} catch (_e) {
-			const raw = await RcpUtilsService.getRequest<RawMemberLevel>(`/member/levels/${levelType}`)
-			return RcpUtilsService.normalizeMemberLevel(raw)
-		}
-	}
+      const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
 
-	private static async postRequest<T, D extends RequestData = RequestData>(path: string, data: D): Promise<T> {
-		const client: http.HttpRequest = http.createHttp()
-		try {
-			const requestOptions: http.HttpRequestOptions = {
-				method: http.RequestMethod.POST,
-				header: new Map<string, string>([
-					['Accept', 'application/json'],
-					['Content-Type', 'application/json']
-				]),
-				connectTimeout: 6000,
-				readTimeout: 6000,
-				extraData: JSON.stringify(data)
-			}
+      if (response.responseCode !== 200 && response.responseCode !== 201) {
+        console.error(`postRequest: HTTP错误 ${response.responseCode}`)
+        throw new Error(`HTTP错误: ${response.responseCode}`)
+      }
 
-			const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
+      let resultString: string = ''
+      if (typeof response.result === 'string') {
+        resultString = response.result as string
+      } else if (response.result !== undefined && response.result !== null) {
+        resultString = String(response.result)
+      }
 
-			// 检查HTTP状态码 - POST请求可以接受200(成功)或201(创建成功)
-			if (response.responseCode !== 200 && response.responseCode !== 201) {
-				console.error(`postRequest: HTTP错误 ${response.responseCode}`)
-				throw new Error(`HTTP错误: ${response.responseCode}`)
-			}
+      if (!resultString) {
+        console.warn('postRequest: 响应为空')
+        throw new Error('响应为空')
+      }
 
-			let resultString: string = ''
-			if (typeof response.result === 'string') {
-				resultString = response.result as string
-			} else if (response.result !== undefined && response.result !== null) {
-				resultString = String(response.result)
-			}
+      let parsed: ApiResponse<T>
+      try {
+        parsed = JSON.parse(resultString) as ApiResponse<T>
 
+      } catch (parseError) {
+        console.error(`postRequest: JSON解析失败:`, parseError)
+        console.error(`postRequest: 原始响应:`, resultString)
+        throw new Error(`JSON解析失败: ${parseError}`)
+      }
 
+      if (!parsed || !parsed.success) {
+        console.warn('postRequest: 响应不成功:', parsed)
+        throw new Error('响应不成功')
+      }
 
-			if (!resultString) {
-				console.warn('postRequest: 响应为空')
-				throw new Error('响应为空')
-			}
+      return parsed.data
+    } catch (error) {
+      console.error(`postRequest: 请求失败 ${path}:`, error)
+      if (error instanceof Error) {
+        throw error
+      } else {
+        throw new Error(`请求失败: ${String(error)}`)
+      }
+    } finally {
+      client.destroy()
+    }
+  }
 
-			let parsed: ApiResponse<T>
-			try {
-				parsed = JSON.parse(resultString) as ApiResponse<T>
+  private static async putRequest<T, D extends RequestData = RequestData>(path: string, data: D): Promise<T> {
+    const client: http.HttpRequest = http.createHttp()
+    try {
+      const requestOptions: http.HttpRequestOptions = {
+        method: http.RequestMethod.PUT,
+        header: new Map<string, string>([
+          ['Accept', 'application/json'],
+          ['Content-Type', 'application/json']
+        ]),
+        connectTimeout: 6000,
+        readTimeout: 6000,
+        extraData: JSON.stringify(data)
+      }
+      const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
 
-			} catch (parseError) {
-				console.error(`postRequest: JSON解析失败:`, parseError)
-				console.error(`postRequest: 原始响应:`, resultString)
-				throw new Error(`JSON解析失败: ${parseError}`)
-			}
+      if (response.responseCode !== 200 && response.responseCode !== 201) {
+        console.error(`putRequest: HTTP错误 ${response.responseCode}`)
+        throw new Error(`HTTP错误: ${response.responseCode}`)
+      }
 
-			if (!parsed || !parsed.success) {
-				console.warn('postRequest: 响应不成功:', parsed)
-				throw new Error('响应不成功')
-			}
+      let resultString: string = ''
+      if (typeof response.result === 'string') {
+        resultString = response.result as string
+      } else if (response.result !== undefined && response.result !== null) {
+        resultString = String(response.result)
+      }
 
-			return parsed.data
-		} catch (error) {
-			console.error(`postRequest: 请求失败 ${path}:`, error)
-			// 确保抛出的是Error对象
-			if (error instanceof Error) {
-				throw error
-			} else {
-				throw new Error(`请求失败: ${String(error)}`)
-			}
-		} finally {
-			client.destroy()
-		}
-	}
+      if (!resultString) {
+        console.warn('putRequest: 响应为空')
+        throw new Error('响应为空')
+      }
 
-	private static async putRequest<T, D extends RequestData = RequestData>(path: string, data: D): Promise<T> {
-		const client: http.HttpRequest = http.createHttp()
-		try {
+      let parsed: ApiResponse<T>
+      try {
+        parsed = JSON.parse(resultString) as ApiResponse<T>
+      } catch (parseError) {
+        console.error(`putRequest: JSON解析失败:`, parseError)
+        console.error(`putRequest: 原始响应:`, resultString)
+        throw new Error(`JSON解析失败: ${parseError}`)
+      }
 
-			
-			const requestOptions: http.HttpRequestOptions = {
-				method: http.RequestMethod.PUT,
-				header: new Map<string, string>([
-					['Accept', 'application/json'],
-					['Content-Type', 'application/json']
-				]),
-				connectTimeout: 6000,
-				readTimeout: 6000,
-				extraData: JSON.stringify(data)
-			}
+      if (!parsed || !parsed.success) {
+        console.warn('putRequest: 响应不成功:', parsed)
+        throw new Error('响应不成功')
+      }
 
+      return parsed.data
+    } catch (error) {
+      console.error(`putRequest: 请求失败 ${path}:`, error)
+      if (error instanceof Error) {
+        throw error
+      } else {
+        throw new Error(`请求失败: ${String(error)}`)
+      }
+    } finally {
+      client.destroy()
+    }
+  }
 
+  static async fetchCoffeeCategories(): Promise<CoffeeCategory[]> {
+    return await RcpUtilsService.getRequest<CoffeeCategory[]>('/category')
+  }
 
-			const response: http.HttpResponse = await client.request(`${RcpUtilsService.BASE_URL}${path}`, requestOptions)
+  static async fetchCoffees(parentId?: number): Promise<CoffeeItem[]> {
+    const query: string = parentId !== undefined ? `?parentId=${parentId}` : ''
+    return await RcpUtilsService.getRequest<CoffeeItem[]>(`/coffee${query}`)
+  }
 
+  static async fetchAddresses(): Promise<Address[]> {
+    return await RcpUtilsService.getRequest<Address[]>('/address')
+  }
 
+  static async saveAddress(addressData: NewAddressData): Promise<Address> {
+    try {
+      const response = await RcpUtilsService.postRequest<Address, NewAddressData>('/address', addressData)
+      return response
+    } catch (error) {
+      console.error('保存地址失败:', error)
+      throw new Error('保存地址失败')
+    }
+  }
 
-			// 检查HTTP状态码 - PUT请求可以接受200(成功)或201(创建成功)
-			if (response.responseCode !== 200 && response.responseCode !== 201) {
-				console.error(`putRequest: HTTP错误 ${response.responseCode}`)
-				throw new Error(`HTTP错误: ${response.responseCode}`)
-			}
+  static async updateAddress(addressId: number, addressData: NewAddressData): Promise<Address> {
+    try {
+      const response = await RcpUtilsService.putRequest<Address, NewAddressData>(`/address/${addressId}`, addressData)
+      return response
+    } catch (error) {
+      console.error('更新地址失败:', error)
+      throw new Error('更新地址失败')
+    }
+  }
 
-			let resultString: string = ''
-			if (typeof response.result === 'string') {
-				resultString = response.result as string
-			} else if (response.result !== undefined && response.result !== null) {
-				resultString = String(response.result)
-			}
+  static async fetchUsers(): Promise<User[]> {
+    try {
+      const users = await RcpUtilsService.getRequest<User[]>('/user')
+      if (!Array.isArray(users)) {
+        return []
+      }
 
+      const validUsers = users.filter(user => {
+        if (!user || typeof user !== 'object') {
+          return false
+        }
+        if (!user.id || !user.name || !user.telephone) {
+          return false
+        }
+        return true
+      })
+      return validUsers
+    } catch (error) {
+      return []
+    }
+  }
 
+  static async getUserByPhone(phoneNumber: string): Promise<User | null> {
+    try {
+      const users = await RcpUtilsService.fetchUsers()
+      if (users.length === 0) {
+        return null
+      }
+      const user = users.find(user => user.telephone === phoneNumber)
+      return user || null
+    } catch (error) {
+      return null
+    }
+  }
 
-			if (!resultString) {
-				console.warn('putRequest: 响应为空')
-				throw new Error('响应为空')
-			}
+  static async getUserById(userId: number): Promise<User | null> {
+    try {
+      const users = await RcpUtilsService.fetchUsers()
+      if (users.length === 0) {
+        return null
+      }
+      const user = users.find(u => u.id === userId)
+      return user || null
+    } catch (_e) {
+      return null
+    }
+  }
 
-			let parsed: ApiResponse<T>
-			try {
-				parsed = JSON.parse(resultString) as ApiResponse<T>
-			} catch (parseError) {
-				console.error(`putRequest: JSON解析失败:`, parseError)
-				console.error(`putRequest: 原始响应:`, resultString)
-				throw new Error(`JSON解析失败: ${parseError}`)
-			}
+  static async updateUserProfile(userId: number, userData: UserProfileUpdateData): Promise<User> {
+    try {
+      const response = await RcpUtilsService.putRequest<User, UserProfileUpdateData>(`/user/${userId}`, userData)
+      return response
+    } catch (error) {
+      throw new Error('更新用户信息失败')
+    }
+  }
 
-			if (!parsed || !parsed.success) {
-				console.warn('putRequest: 响应不成功:', parsed)
-				throw new Error('响应不成功')
-			}
+  static async updateUserStatsDelta(userId: number, coinsDelta: number, growthDelta: number)
+    : Promise<UserStatsUpdateResponse> {
+    const payload: UserProfileUpdateData = {
+      coins_delta: Number(coinsDelta || 0),
+      growth_delta: Number(growthDelta || 0)
+    }
+    const resp = await RcpUtilsService.putRequest<UserStatsUpdateResponse, UserProfileUpdateData>(`/user/${userId}`, payload)
+    return resp
+  }
 
-			return parsed.data
-		} catch (error) {
-			console.error(`putRequest: 请求失败 ${path}:`, error)
-			// 确保抛出的是Error对象
-			if (error instanceof Error) {
-				throw error
-			} else {
-				throw new Error(`请求失败: ${String(error)}`)
-			}
-		} finally {
-			client.destroy()
-		}
-	}
+  static async updateUserLevel(userId: number, levelType: number): Promise<User | null> {
+    try {
+      const current = await RcpUtilsService.getUserById(userId)
+      if (!current) return null
+      const updated = await RcpUtilsService.updateUserProfile(userId, {
+        name: current.name,
+        telephone: current.telephone,
+        avatar: current.avatar,
+        level_type: levelType
+      })
+      return updated
+    } catch (_e) {
+      return null
+    }
+  }
 
-	static async fetchCoffeeCategories(): Promise<CoffeeCategory[]> {
-		return await RcpUtilsService.getRequest<CoffeeCategory[] >('/category')
-	}
+  static async resetUserCoinsToZero(userId: number): Promise<User | null> {
+    try {
+      const current = await RcpUtilsService.getUserById(userId)
+      if (!current) return null
+      const updated = await RcpUtilsService.updateUserProfile(userId, {
+        name: current.name,
+        telephone: current.telephone,
+        avatar: current.avatar,
+        coins: 0
+      })
+      return updated
+    } catch (_e) {
+      return null
+    }
+  }
 
-	static async fetchCoffees(parentId?: number): Promise<CoffeeItem[]> {
-		const query: string = parentId !== undefined ? `?parentId=${parentId}` : ''
-		return await RcpUtilsService.getRequest<CoffeeItem[]>(`/coffee${query}`)
-	}
+  static async incrementUserStats(userId: number, coinsDelta: number, growthDelta: number): Promise<User | null> {
+    try {
+      const data = await RcpUtilsService.updateUserStatsDelta(userId, coinsDelta, growthDelta)
+      if (data && typeof data.level_type === 'number') {
+        LoginStateService.setUserLevelType(data.level_type as number)
+      }
+      const user = await RcpUtilsService.getUserById(userId)
+      return user
+    } catch (_e) {
+      return null
+    }
+  }
 
-	// 获取地址列表
-	static async fetchAddresses(): Promise<Address[]> {
-		return await RcpUtilsService.getRequest<Address[]>('/address')
-	}
-
-	// 保存地址
-	static async saveAddress(addressData: NewAddressData): Promise<Address> {
-		try {
-			const response = await RcpUtilsService.postRequest<Address, NewAddressData>('/address', addressData)
-			return response
-		} catch (error) {
-			console.error('保存地址失败:', error)
-			throw new Error('保存地址失败')
-		}
-	}
-
-	// 更新地址
-	static async updateAddress(addressId: number, addressData: NewAddressData): Promise<Address> {
-		try {
-			const response = await RcpUtilsService.putRequest<Address, NewAddressData>(`/address/${addressId}`, addressData)
-			return response
-		} catch (error) {
-			console.error('更新地址失败:', error)
-			throw new Error('更新地址失败')
-		}
-	}
-
-	// 获取用户列表
-	static async fetchUsers(): Promise<User[]> {
-		try {
-			const users = await RcpUtilsService.getRequest<User[]>('/user')
-
-			// 验证返回的数据
-			if (!Array.isArray(users)) {
-				return []
-			}
-
-			// 验证每个用户对象
-			const validUsers = users.filter(user => {
-				if (!user || typeof user !== 'object') {
-					return false
-				}
-				if (!user.id || !user.name || !user.telephone) {
-					return false
-				}
-				return true
-			})
-
-			return validUsers
-		} catch (error) {
-			// 返回空数组而不是抛出错误，避免登录功能完全失效
-			return []
-		}
-	}
-
-	// 根据手机号获取用户信息
-	static async getUserByPhone(phoneNumber: string): Promise<User | null> {
-		try {
-			const users = await RcpUtilsService.fetchUsers()
-
-			if (users.length === 0) {
-				return null
-			}
-
-			const user = users.find(user => user.telephone === phoneNumber)
-
-			return user || null
-		} catch (error) {
-			return null
-		}
-	}
-
-	// 更新用户信息
-	static async updateUserProfile(userId: number, userData: UserProfileUpdateData): Promise<User> {
-		try {
-			const response = await RcpUtilsService.putRequest<User, UserProfileUpdateData>(`/user/${userId}`, userData)
-			return response
-		} catch (error) {
-			throw new Error('更新用户信息失败')
-		}
-	}
+  static async uploadUserAvatar(uploadData: AvatarUploadData): Promise<ApiResponse<AvatarUploadResponse>> {
+    try {
+      const response =
+        await RcpUtilsService.postRequest<ApiResponse<AvatarUploadResponse>, AvatarUploadData>('/user/avatar',
+          uploadData)
+      return response
+    } catch (error) {
+      console.error('上传头像失败:', error)
+      throw new Error('上传头像失败')
+    }
+  }
 }

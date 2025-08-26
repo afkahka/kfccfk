@@ -1,5 +1,6 @@
 import { LoginStateService } from '../common/service/LoginStateService'
 import { RcpUtilsService, UserProfileUpdateData } from '../common/service/RcpUtilsService'
+import picker from '@ohos.file.picker'
 
 @Builder
 export function ProfileEditPageBuilder() {
@@ -12,20 +13,20 @@ export struct ProfileEditPage {
   @StorageProp('topSafeHeight') topSafeHeight: number = 0
   @StorageProp('bottomSafeHeight') bottomSafeHeight: number = 0
   @Consume('pathStack') pathStack: NavPathStack
-  
   @State userName: string = ''
   @State userPhone: string = ''
+  @State userAvatar: string = ''
+  @State isAvatarLoading: boolean = false
 
   aboutToAppear() {
-    // 从登录状态服务获取当前用户信息
     this.userName = LoginStateService.getUserName() || ''
     this.userPhone = LoginStateService.getUserPhone() || ''
+    this.userAvatar = LoginStateService.getUserAvatar() || ''
   }
 
   build() {
     NavDestination() {
       Column() {
-        // 顶部导航栏
         Row() {
           Image($r('app.media.back'))
             .width(24)
@@ -33,7 +34,7 @@ export struct ProfileEditPage {
             .onClick(() => {
               this.pathStack.pop()
             })
-          
+
           Text('个人资料')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
@@ -47,19 +48,30 @@ export struct ProfileEditPage {
         .backgroundColor(Color.White)
         .border({ width: { bottom: 1 }, color: '#F0F0F0' })
 
-        // 表单内容区域
         Scroll() {
-                     Column() {
-             // 昵称编辑
-             this.buildFormRow('昵称', '请输入昵称', this.userName, (value: string) => {
-               this.userName = value
-             })
-             
-             // 手机号显示（只读）
-             this.buildPhoneRow()
-           }
+          Column() {
+            this.buildAvatarRow()
+
+            Column() {
+              this.buildFormRow('昵称', '请输入昵称', this.userName, (value: string) => {
+                this.userName = value
+              })
+
+              this.buildPhoneRow()
+            }
+            .width('100%')
+            .padding({ top: 16, bottom: 16 })
+            .backgroundColor('#FFF')
+            .borderRadius(12)
+            .shadow({
+              radius: 8,
+              color: '#00000008',
+              offsetX: 0,
+              offsetY: 2
+            })
+          }
           .padding({
-            top: 0,
+            top: 16,
             left: 16,
             right: 16,
             bottom: 16
@@ -69,7 +81,6 @@ export struct ProfileEditPage {
         .layoutWeight(1)
         .backgroundColor(Color.White)
 
-        // 底部保存按钮区域
         this.buildSaveButton()
       }
       .width('100%')
@@ -82,11 +93,6 @@ export struct ProfileEditPage {
     .hideToolBar(true)
   }
 
-
-
-
-
-  // 构建表单项行
   @Builder
   buildFormRow(label: string, placeholder: string, value: string, onValueChange: (value: string) => void) {
     Column() {
@@ -96,6 +102,7 @@ export struct ProfileEditPage {
           .fontColor('#333333')
           .fontWeight(FontWeight.Medium)
           .width(80)
+          .textAlign(TextAlign.Start)
 
         TextInput({
           placeholder: placeholder,
@@ -105,12 +112,118 @@ export struct ProfileEditPage {
           .fontSize(16)
           .fontColor('#222222')
           .backgroundColor(Color.Transparent)
+          .placeholderColor('#ADB5BD')
+          .textAlign(TextAlign.Start)
           .onChange(onValueChange)
       }
       .width('100%')
-      .padding({ top: 8, bottom: 12 })
+      .padding({ top: 12, bottom: 12 })
+      .justifyContent(FlexAlign.Start)
 
-      // 分割线
+      if (label !== '手机号') {
+        Divider()
+          .width('100%')
+          .color('#F0F0F0')
+          .margin({ top: 0 })
+      }
+    }
+    .width('100%')
+  }
+
+  @Builder
+  buildAvatarRow() {
+    Column() {
+      Column() {
+        Text('头像')
+          .fontSize(16)
+          .fontColor('#333333')
+          .fontWeight(FontWeight.Medium)
+          .alignSelf(ItemAlign.Start)
+          .margin({ bottom: 16 })
+
+        Column() {
+          Stack() {
+            Circle()
+              .width(80)
+              .height(80)
+              .fill('#F8F9FA')
+              .stroke('#E9ECEF')
+              .strokeWidth(2)
+
+            if (this.userAvatar) {
+              Image(this.userAvatar)
+                .width(76)
+                .height(76)
+                .borderRadius(38)
+                .objectFit(ImageFit.Cover)
+            } else {
+              Column() {
+                Image($r('app.media.logo'))
+                  .width(40)
+                  .height(40)
+                  .objectFit(ImageFit.Contain)
+                Text('头像')
+                  .fontSize(12)
+                  .fontColor('#6C757D')
+                  .margin({ top: 4 })
+              }
+              .width(76)
+              .height(76)
+              .borderRadius(38)
+              .justifyContent(FlexAlign.Center)
+            }
+
+            if (this.isAvatarLoading) {
+              Circle()
+                .width(80)
+                .height(80)
+                .fill('#00000040')
+              LoadingProgress()
+                .width(40)
+                .height(40)
+                .color('#FFF')
+            }
+
+            if (!this.isAvatarLoading) {
+              Circle()
+                .width(24)
+                .height(24)
+                .fill('#007AFF')
+                .position({ x: 56, y: 56 })
+                .shadow({
+                  radius: 4,
+                  color: '#00000020',
+                  offsetX: 0,
+                  offsetY: 2
+                })
+
+              Image($r('app.media.edit'))
+                .width(12)
+                .height(12)
+                .fillColor(Color.White)
+                .position({ x: 62, y: 62 })
+            }
+          }
+          .onClick(() => {
+            this.selectAvatar()
+          })
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Center)
+        .padding({ top: 8, bottom: 16 })
+      }
+      .width('100%')
+      .padding({ top: 16, bottom: 16 })
+      .backgroundColor('#FFF')
+      .borderRadius(12)
+      .shadow({
+        radius: 8,
+        color: '#00000008',
+        offsetX: 0,
+        offsetY: 2
+      })
+      .margin({ bottom: 16 })
+
       Divider()
         .width('100%')
         .color('#F0F0F0')
@@ -119,7 +232,6 @@ export struct ProfileEditPage {
     .width('100%')
   }
 
-  // 构建手机号显示行（只读）
   @Builder
   buildPhoneRow() {
     Column() {
@@ -129,37 +241,38 @@ export struct ProfileEditPage {
           .fontColor('#333333')
           .fontWeight(FontWeight.Medium)
           .width(80)
+          .textAlign(TextAlign.Start)
 
         Text(this.userPhone)
           .fontSize(16)
-          .fontColor('#999999')
+          .fontColor('#6C757D')
           .layoutWeight(1)
           .textAlign(TextAlign.Start)
       }
       .width('100%')
-      .padding({ top: 8, bottom: 12 })
-
-      // 分割线
-      Divider()
-        .width('100%')
-        .color('#F0F0F0')
-        .margin({ top: 0 })
+      .padding({ top: 12, bottom: 12 })
+      .justifyContent(FlexAlign.Start)
     }
     .width('100%')
   }
 
-  // 构建保存按钮
   @Builder
   buildSaveButton() {
     Column() {
       Button('保存')
-        .width('90%')
-        .height(48)
+        .width('100%')
+        .height(52)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
         .fontColor(Color.White)
-        .backgroundColor(this.canSubmit() ? '#007AFF' : '#CCCCCC')
-        .borderRadius(24)
+        .backgroundColor(this.canSubmit() ? '#007AFF' : '#E9ECEF')
+        .borderRadius(26)
+        .shadow({
+          radius: this.canSubmit() ? 8 : 0,
+          color: this.canSubmit() ? '#007AFF40' : 'transparent',
+          offsetX: 0,
+          offsetY: 4
+        })
         .onClick(() => {
           if (this.canSubmit()) {
             this.submitProfile()
@@ -167,23 +280,84 @@ export struct ProfileEditPage {
         })
     }
     .width('100%')
-    .padding(16)
+    .padding({
+      top: 24,
+      left: 16,
+      right: 16,
+      bottom: 16
+    })
     .backgroundColor(Color.White)
   }
 
-  // 检查是否可以提交
+  async selectAvatar() {
+    try {
+      const photoPicker = new picker.PhotoViewPicker()
+      const photoSelectOptions: picker.PhotoSelectOptions = {
+        MIMEType: picker.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: 1
+      }
+      const photoViewPickerResult = await photoPicker.select(photoSelectOptions)
+      if (photoViewPickerResult && photoViewPickerResult.photoUris && photoViewPickerResult.photoUris.length > 0) {
+        const selectedPhotoUri = photoViewPickerResult.photoUris[0]
+        await this.processSelectedAvatar(selectedPhotoUri)
+      }
+    } catch (error) {
+      console.error('选择头像失败:', error)
+      AlertDialog.show({
+        title: '选择失败',
+        message: '无法选择头像，请重试',
+        confirm: {
+          value: '确定',
+          action: () => {
+          }
+        }
+      })
+    }
+  }
+
+  async processSelectedAvatar(photoUri: string) {
+    this.isAvatarLoading = true
+
+    try {
+      this.userAvatar = photoUri
+      LoginStateService.setUserAvatar(photoUri)
+
+      AlertDialog.show({
+        title: '头像设置成功',
+        message: '头像已成功设置',
+        confirm: {
+          value: '确定',
+          action: () => {
+          }
+        }
+      })
+
+    } catch (error) {
+      console.error('处理头像失败:', error)
+      AlertDialog.show({
+        title: '设置失败',
+        message: '无法设置头像，请重试',
+        confirm: {
+          value: '确定',
+          action: () => {
+          }
+        }
+      })
+    } finally {
+      this.isAvatarLoading = false
+    }
+  }
+
   canSubmit(): boolean {
     return this.userName.trim() !== ''
   }
 
-  // 提交个人资料
   async submitProfile() {
     if (!this.canSubmit()) {
       return
     }
 
     try {
-      // 获取当前用户ID
       const userId = LoginStateService.getUserId()
       if (!userId) {
         AlertDialog.show({
@@ -198,17 +372,19 @@ export struct ProfileEditPage {
         return
       }
 
-      // 准备要更新的用户数据
       const userData: UserProfileUpdateData = {}
       if (this.userName && this.userName.trim() !== '') {
         userData.name = this.userName.trim()
       }
-      // 根据后端API要求，需要包含telephone字段
+
       if (this.userPhone && this.userPhone.trim() !== '') {
         userData.telephone = this.userPhone.trim()
       }
 
-      // 检查是否有数据需要更新
+      if (this.userAvatar && this.userAvatar.trim() !== '') {
+        userData.avatar = this.userAvatar.trim()
+      }
+
       if (Object.keys(userData).length === 0) {
         AlertDialog.show({
           title: '提示',
@@ -222,32 +398,33 @@ export struct ProfileEditPage {
         return
       }
 
-             // 调用API更新用户信息到数据库
-       const updatedUser = await RcpUtilsService.updateUserProfile(userId, userData)
+      const updatedUser = await RcpUtilsService.updateUserProfile(userId, userData)
 
-             // 更新本地登录状态服务中的用户信息
-       if (userData.name) {
-         LoginStateService.setUserName(userData.name)
-       }
-       if (userData.telephone) {
-         LoginStateService.setUserPhone(userData.telephone)
-       }
+      if (userData.name) {
+        LoginStateService.setUserName(userData.name)
+      }
+
+      if (userData.telephone) {
+        LoginStateService.setUserPhone(userData.telephone)
+      }
+
+      if (userData.avatar) {
+        LoginStateService.setUserAvatar(userData.avatar)
+      }
 
       AlertDialog.show({
         title: '保存成功',
         message: '个人资料已更新并同步到服务器',
-                 confirm: {
-           value: '确定',
-           action: () => {
-             // 延迟一下确保数据同步完成，然后返回上一页
-             setTimeout(() => {
-               this.pathStack.pop()
-             }, 100)
-           }
-         }
+        confirm: {
+          value: '确定',
+          action: () => {
+            setTimeout(() => {
+              this.pathStack.pop()
+            }, 100)
+          }
+        }
       })
-         } catch (error) {
-       // 根据错误类型显示不同的错误信息
+    } catch (error) {
       let errorMessage = '网络错误，请稍后重试'
       if (error instanceof Error) {
         if (error.message.includes('无效的用户ID')) {
@@ -268,7 +445,7 @@ export struct ProfileEditPage {
           errorMessage = `保存失败: ${error.message}`
         }
       }
-      
+
       AlertDialog.show({
         title: '保存失败',
         message: errorMessage,

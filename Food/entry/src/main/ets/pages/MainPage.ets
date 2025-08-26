@@ -44,11 +44,9 @@ export struct MainPage {
   }
 
   onPageShow() {
-    // 接收其他页面请求切换的 tab 索引（例如从订单列表返回到点餐页）
     const targetIdx = AppStorage.get<number>('switchTabIndex')
     if (targetIdx !== undefined && targetIdx !== null && targetIdx >= 0) {
       this.currentIndex = targetIdx
-      // 清空标记，避免再次切换
       AppStorage.setOrCreate('switchTabIndex', -1)
     }
   }

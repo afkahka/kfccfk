@@ -14,12 +14,15 @@ export struct LoginPage{
   @State isLoggedIn: boolean = false
   @State verificationCode: string = ''
   @State isLoading: boolean = false
+  @State showProgress: boolean = false
+  @State loginProgress: number = 0 // 0~1
+  private progressTimer: number = 0
   @State showPassword: boolean = false
   @State countdown: number = 0
   @State canSendCode: boolean = true
   @State errorMessage: string = ''
   @State successMessage: string = ''
-  @State userName: string = '' // 新增：存储用户名
+  @State userName: string = ''
   @Consume('pathStack') pathStack:NavPathStack
 
   build() {
@@ -31,8 +34,21 @@ export struct LoginPage{
           .margin({top:'50vp'})
         Text('遇见好时光')
 
+        if (this.showProgress) {
+          Row(){
+            Blank().height(6).layoutWeight(1).backgroundColor('#F5CED0').borderRadius(3)
+            Row(){ Blank() }
+              .height(6)
+              .width(`${Math.round(this.loginProgress * 100)}%`)
+              .backgroundColor('#FF5252')
+              .borderRadius(3)
+              .position({ x: 0 })
+          }
+          .width('84%')
+          .margin({ top: 12 })
+        }
+
         Column() {
-          // 错误提示
           if(this.errorMessage){
             Text(this.errorMessage)
               .fontSize(14)
@@ -44,7 +60,6 @@ export struct LoginPage{
               .width('100%')
           }
 
-          // 成功提示
           if(this.successMessage){
             Text(this.successMessage)
               .fontSize(14)
@@ -80,7 +95,6 @@ export struct LoginPage{
               })
               .placeholderColor('#999999')
 
-            // 格式提示
             Text('支持手机号（11位数字）或邮箱地址')
               .fontSize(12)
               .fontColor('#999999')
@@ -204,62 +218,52 @@ export struct LoginPage{
     .hideToolBar(true)
   }
 
-  // 检查是否可以登录
   canLogin(): boolean {
     return this.account.length > 0 && this.verificationCode.length > 0
   }
 
-  // 验证手机号是否存在于用户列表中
   async validatePhoneNumber(phoneNumber: string): Promise<boolean> {
     try {
       const users: User[] = await RcpUtilsService.fetchUsers()
-      
-      // 额外的安全检查
+
       if (!users || !Array.isArray(users)) {
         return false
       }
-      
-      // 检查输入的手机号是否在用户列表中存在
+
       const userExists = users.some(user => user.telephone === phoneNumber)
       
       return userExists
     } catch (error) {
-      // 如果无法获取用户列表，为了安全起见，拒绝登录
       return false
     }
   }
 
-  // 验证手机号格式
   isValidPhoneNumber(phoneNumber: string): boolean {
-    // 中国手机号格式：11位数字，以1开头
     const phoneRegex = /^1[3-9]\d{9}$/
     return phoneRegex.test(phoneNumber)
   }
 
-  // 清除消息提示
   clearMessages() {
     this.errorMessage = ''
     this.successMessage = ''
   }
 
-  // 发送验证码
   async sendVerificationCode() {
     if (this.account.length === 0) {
       this.errorMessage = '请先输入账号'
       return
     }
 
-    // 检查是否为手机号格式
     if (!this.isValidPhoneNumber(this.account)) {
       this.errorMessage = '请输入正确的手机号格式'
       return
     }
 
     this.isLoading = true
+    this.startProgress()
     this.canSendCode = false
 
     try {
-      // 先验证手机号是否存在于用户列表中
       const isValidPhone = await this.validatePhoneNumber(this.account)
       if (!isValidPhone) {
         this.errorMessage = '该手机号未注册，请先注册或联系管理员'
@@ -270,7 +274,6 @@ export struct LoginPage{
       const result: SendResult = await VerificationCodeService.sendVerificationCode(this.account)
 
       if(result.success){
-        // 尝试获取用户信息以显示用户名
         try {
           const user = await RcpUtilsService.getUserByPhone(this.account)
           
@@ -297,10 +300,10 @@ export struct LoginPage{
       this.canSendCode = true
     }finally{
       this.isLoading = false
+      this.stopProgress()
     }
   }
 
-  // 开始倒计时
   startCountdown() {
     this.countdown = 60
     const timer = setInterval(()=>{
@@ -312,17 +315,16 @@ export struct LoginPage{
     }, 1000)
   }
 
-  // 处理登录
   async handleLogin() {
     if (!this.canLogin()) {
       return
     }
 
     this.isLoading = true
+    this.startProgress()
     this.clearMessages()
 
     try {
-      // 再次验证手机号是否存在于用户列表中（双重保险）
       if (!this.isValidPhoneNumber(this.account)) {
         this.errorMessage = '请输入正确的手机号格式'
         return
@@ -337,7 +339,6 @@ export struct LoginPage{
       const result: VerifyResult = await VerificationCodeService.verifyCode(this.account, this.verificationCode)
 
       if (result.success) {
-        // 获取用户信息以显示用户名
         let user: User | null = null
         try {
           user = await RcpUtilsService.getUserByPhone(this.account)
@@ -351,8 +352,7 @@ export struct LoginPage{
         } catch (error) {
           this.successMessage = '登录成功！'
         }
-        
-        // 使用LoginStateService记录登录状态
+
         if (user && user.id) {
           LoginStateService.setUserLoginInfo(
             user.id,
@@ -363,12 +363,10 @@ export struct LoginPage{
             user.level_type ?? 0
           )
         } else {
-          // 如果没有用户ID，至少记录账号和登录状态
           LoginStateService.setLastLoginAccount(this.account)
           LoginStateService.setIsLoggedIn(true)
         }
         this.isLoggedIn = true
-        // 登录成功后替换当前路由，避免回退再进入登录/启动页
         this.pathStack.replacePathByName(UserConstants.ROUTER[1], null)
       } else {
         this.errorMessage = result.message
@@ -377,15 +375,42 @@ export struct LoginPage{
       this.errorMessage = '登录失败，请稍后重试'
     } finally {
       this.isLoading = false
+      this.stopProgress()
     }
   }
 
-  // 微信登录
+  startProgress() {
+    this.showProgress = true
+    this.loginProgress = 0.1
+    if (this.progressTimer) {
+      clearInterval(this.progressTimer)
+    }
+
+    this.progressTimer = setInterval(() => {
+      if (this.loginProgress < 0.9) {
+        this.loginProgress = Math.min(0.9, this.loginProgress + 0.05)
+      }
+    }, 120)
+  }
+
+  stopProgress() {
+    animateTo({ duration: 200, curve: Curve.EaseOut }, () => {
+      this.loginProgress = 1
+    })
+    setTimeout(() => {
+      this.showProgress = false
+      this.loginProgress = 0
+      if (this.progressTimer) {
+        clearInterval(this.progressTimer)
+        this.progressTimer = 0
+      }
+    }, 220)
+  }
+
   wechatLogin() {
     // TODO: 实现微信登录
   }
 
-  // QQ登录
   qqLogin() {
     // TODO: 实现QQ登录
   }

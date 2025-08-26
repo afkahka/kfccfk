@@ -12,15 +12,16 @@ export class CheckoutService {
   private static address: Address | null = null
   private static items: CheckoutItemData[] = []
   private static totalAmount: number = 0
+  private static discountByCoins: number = 0
   private static orderId: string = ''
   private static pickupCode: string = ''
-  private static createdAt: number = 0 // epoch ms
+  private static createdAt: number = 0
 
-  static setCheckoutData(address: Address, items: CheckoutItemData[], totalAmount: number): void {
+  static setCheckoutData(address: Address, items: CheckoutItemData[], totalAmount: number, discountByCoins: number = 0): void {
     CheckoutService.address = address
     CheckoutService.items = items
     CheckoutService.totalAmount = totalAmount
-    // 生成订单号、取餐码与时间
+    CheckoutService.discountByCoins = discountByCoins
     const now: number = Date.now()
     CheckoutService.createdAt = now
     CheckoutService.orderId = CheckoutService.generateOrderId(now)
@@ -39,6 +40,10 @@ export class CheckoutService {
     return CheckoutService.totalAmount
   }
 
+  static getDiscountByCoins(): number {
+    return CheckoutService.discountByCoins
+  }
+
   static getOrderId(): string {
     return CheckoutService.orderId
   }
@@ -52,7 +57,6 @@ export class CheckoutService {
   }
 
   private static generateOrderId(ts: number): string {
-    // 例: yyyyMMddHHmmss + 随机4位
     const date = new Date(ts)
     const pad = (n: number) => (n < 10 ? '0' + n : String(n))
     const y = date.getFullYear()
@@ -66,7 +70,6 @@ export class CheckoutService {
   }
 
   private static generatePickupCode(): string {
-    // 4位数字取餐码
     return String(Math.floor(1000 + Math.random() * 9000))
   }
 }

@@ -14,16 +14,17 @@ export struct OrderDetailPage {
   @State address: Address | null = null
   @State items: CheckoutItemData[] = []
   @State totalAmount: number = 0
+  @State discountByCoins: number = 0
   @State orderId: string = ''
   @State pickupCode: string = ''
   @State createdAt: number = 0
   @State isExpanded: boolean = false
 
   aboutToAppear() {
-    // 复用结算数据以展示详情
     this.address = CheckoutService.getAddress()
     this.items = CheckoutService.getItems()
     this.totalAmount = CheckoutService.getTotalAmount()
+    this.discountByCoins = CheckoutService.getDiscountByCoins()
     this.orderId = CheckoutService.getOrderId()
     this.pickupCode = CheckoutService.getPickupCode()
     this.createdAt = CheckoutService.getCreatedAt()
@@ -32,7 +33,6 @@ export struct OrderDetailPage {
   build() {
     NavDestination() {
       Column() {
-        // 顶部：完成提示 + 取餐码 + 副标题
         Column() {
           Row() {
             Image($r('app.media.back')).width(24).height(24).onClick(() => this.pathStack.pop())
@@ -55,7 +55,6 @@ export struct OrderDetailPage {
         .padding({ left: 16, right: 16, top: this.getUIContext().px2vp(this.topSafeHeight) })
         .backgroundColor('#C8A07B')
 
-        // 配送地址卡片（撑满容器）
         Row() {
           Column() {
             Row() {
@@ -82,7 +81,6 @@ export struct OrderDetailPage {
         .width('100%')
         .padding({ top: 12 })
 
-        // 商品列表（默认展示2条，可展开/收起；可滚动）
         Column() {
           ForEach(this.items.slice(0, this.isExpanded ? this.items.length : Math.min(2, this.items.length)),
             (it: CheckoutItemData) => {
@@ -126,7 +124,6 @@ export struct OrderDetailPage {
         .backgroundColor(Color.White)
         .margin({ top: 10 })
 
-        // 优惠券与合计
         Row() {
           Text('优惠券').fontSize(16).fontColor('#222222')
           Blank().layoutWeight(1)
@@ -144,7 +141,7 @@ export struct OrderDetailPage {
         Row() {
           Blank().layoutWeight(1)
           Text(`共${this.items.reduce((s: number, i: CheckoutItemData) => s + i.count,
-            0)}件， 微信  ¥ ${this.totalAmount.toFixed(2)}`)
+            0)}件， 微信  ¥ ${(Math.max(0, this.totalAmount - this.discountByCoins)).toFixed(2)}`)
             .fontSize(16).fontColor('#222222')
         }
         .width('100%')
@@ -157,7 +154,6 @@ export struct OrderDetailPage {
         .backgroundColor(Color.White)
         .margin({ bottom: 10 })
 
-        // 订单信息
         Column() {
           this.infoRow('下单时间', this.formatTime(this.createdAt))
           this.infoRow('订单号码', this.orderId)
@@ -168,7 +164,6 @@ export struct OrderDetailPage {
         .width('100%').padding(16)
         .backgroundColor(Color.White)
 
-        // 底部：再来一单
         Row() {
           Blank().layoutWeight(1)
           Button('再来一单')

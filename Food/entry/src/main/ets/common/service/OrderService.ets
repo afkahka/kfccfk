@@ -22,7 +22,6 @@ export class OrderService {
     if (OrderService.loaded) {
       return
     }
-    // 确保将 AppStorage key 与持久化存储建立绑定关系
     try {
       PersistentStorage.persistProp(OrderService.KEY_ORDERS, '[]')
     } catch (_e) {
@@ -38,7 +37,6 @@ export class OrderService {
     const now = Date.now()
     const sevenDays = 7 * 24 * 60 * 60 * 1000
     if (savedAt > 0 && now - savedAt > sevenDays) {
-      // 过期：清理缓存
       AppStorage.setOrCreate(OrderService.KEY_ORDERS, '[]')
       AppStorage.setOrCreate(OrderService.KEY_ORDERS_TS, now)
       PersistentStorage.persistProp(OrderService.KEY_ORDERS, '[]')
@@ -72,7 +70,6 @@ export class OrderService {
     const addr = CheckoutService.getAddress()
     const items = CheckoutService.getItems()
     const amount = CheckoutService.getTotalAmount()
-    // 每次支付生成新的时间、订单号与取餐码
     const createdAt = Date.now()
     const orderId = OrderService.generateOrderId(createdAt)
     const pickupCode = OrderService.generatePickupCode()
