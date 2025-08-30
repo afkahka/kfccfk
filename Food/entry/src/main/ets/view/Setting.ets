@@ -110,7 +110,7 @@ export struct Setting {
           .margin({top:30})
           .onClick(() => {
             LoginStateService.clearUserLoginInfo()
-            this.pathStack.pushPathByName("LoginPage",null)
+            this.pathStack.replacePathByName("LoginPage",null)
           })
       }
       .width('100%')

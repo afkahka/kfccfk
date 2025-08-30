@@ -30,6 +30,8 @@ export struct HomePage {
   onPageShow() {
     this.loadUserPreferences()
     this.loadMemberRightText()
+    
+
   }
 
   async loadUserPreferences() {
@@ -54,6 +56,8 @@ export struct HomePage {
       }
       this.loadMemberLevelName()
       this.loadMemberRightText()
+      
+      
     } catch (error) {
       console.error('HomePage: 获取用户登录状态失败:', error)
     }
@@ -278,7 +282,7 @@ export struct HomePage {
       .margin({ top: 8 })
 
       Row(){
-        Column(){ Text(String(this.userCoins)).fontSize(18).fontColor('#222222'); Text('雪王币').fontSize(12).fontColor('#888888') }
+        Column(){ Text(String(this.userCoins)).fontSize(18).fontColor('#222222'); Text('迪奥币').fontSize(12).fontColor('#888888') }
           .alignItems(HorizontalAlign.Center).layoutWeight(1)
         Column(){ Text(String(this.userCoupons)).fontSize(18).fontColor('#222222'); Text('优惠券').fontSize(12).fontColor('#888888') }
           .alignItems(HorizontalAlign.Center).layoutWeight(1)

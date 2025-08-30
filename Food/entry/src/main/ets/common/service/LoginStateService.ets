@@ -7,6 +7,7 @@ export class LoginStateService {
   private static readonly KEY_USER_AVATAR = 'userAvatar'
   private static readonly KEY_USER_AVATAR_BASE64 = 'userAvatarBase64'
   private static readonly KEY_USER_LEVEL = 'userLevelType'
+  private static readonly KEY_LAST_SIGN_IN_DATE = 'lastSignInDate'
 
   static {
     PersistentStorage.persistProp(LoginStateService.KEY_IS_LOGGED_IN, false)
@@ -17,6 +18,7 @@ export class LoginStateService {
     PersistentStorage.persistProp(LoginStateService.KEY_USER_AVATAR, '')
     PersistentStorage.persistProp(LoginStateService.KEY_USER_AVATAR_BASE64, '')
     PersistentStorage.persistProp(LoginStateService.KEY_USER_LEVEL, 0)
+    PersistentStorage.persistProp(LoginStateService.KEY_LAST_SIGN_IN_DATE, '')
   }
 
   private static currentIsLoggedIn: boolean = false
@@ -27,6 +29,7 @@ export class LoginStateService {
   private static currentUserAvatar: string = ''
   private static currentUserAvatarBase64: string = ''
   private static currentUserLevelType: number = 0
+  private static currentLastSignInDate: string = ''
 
   static setIsLoggedIn(value: boolean): void {
     LoginStateService.currentIsLoggedIn = value
@@ -148,6 +151,21 @@ export class LoginStateService {
     return LoginStateService.currentUserAvatarBase64
   }
 
+  static setLastSignInDate(date: string): void {
+    LoginStateService.currentLastSignInDate = date
+    AppStorage.setOrCreate(LoginStateService.KEY_LAST_SIGN_IN_DATE, date)
+    PersistentStorage.persistProp(LoginStateService.KEY_LAST_SIGN_IN_DATE, date)
+  }
+
+  static getLastSignInDate(): string {
+    const appStorageValue = AppStorage.get<string>(LoginStateService.KEY_LAST_SIGN_IN_DATE)
+    if (appStorageValue !== undefined) {
+      LoginStateService.currentLastSignInDate = appStorageValue
+      return appStorageValue
+    }
+    return LoginStateService.currentLastSignInDate
+  }
+
   static setUserLoginInfo(userId: number, userName: string, userPhone: string, account: string, userAvatar: string = '', userLevelType: number = 0): void {
     LoginStateService.setUserId(userId)
     LoginStateService.setUserName(userName)
@@ -179,6 +197,7 @@ export class LoginStateService {
     const userPhone = AppStorage.get<string>(LoginStateService.KEY_USER_PHONE)
     const userAvatar = AppStorage.get<string>(LoginStateService.KEY_USER_AVATAR)
     const userLevelType = AppStorage.get<number>(LoginStateService.KEY_USER_LEVEL)
+    const lastSignInDate = AppStorage.get<string>(LoginStateService.KEY_LAST_SIGN_IN_DATE)
 
     if (isLoggedIn !== undefined) LoginStateService.currentIsLoggedIn = isLoggedIn
     if (lastAccount !== undefined) LoginStateService.currentLastAccount = lastAccount
@@ -187,5 +206,6 @@ export class LoginStateService {
     if (userPhone !== undefined) LoginStateService.currentUserPhone = userPhone
     if (userAvatar !== undefined) LoginStateService.currentUserAvatar = userAvatar
     if (userLevelType !== undefined) LoginStateService.currentUserLevelType = userLevelType
+    if (lastSignInDate !== undefined) LoginStateService.currentLastSignInDate = lastSignInDate
   }
 }

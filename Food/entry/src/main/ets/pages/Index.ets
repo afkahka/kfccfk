@@ -22,30 +22,24 @@ struct Index {
   private context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext
 
   aboutToAppear(): void {
-    // 强制检查状态，确保不会重复显示
     if (this.agreedState === UserConstants.AGREED_STATE[1]) {
-      // 用户已经同意过，直接跳转
-      this.isShow = false; // 确保不显示隐私保护页面
-      this.countdown = 0; // 重置倒计时
-      this.flag = false; // 强制设置标志
+      this.isShow = false;
+      this.countdown = 0;
+      this.flag = false;
 
-      // 冷启动时先同步持久化数据到AppStorage
       LoginStateService.syncStorageData()
-      // 然后读取AppStorage中的登录状态
       this.isLoggedIn = LoginStateService.isUserLoggedIn()
       if (this.isLoggedIn) {
         this.pathStack.replacePathByName(UserConstants.ROUTER[1], null)
       } else {
         this.pathStack.replacePathByName(UserConstants.ROUTER[0], null)
       }
-      return; // 直接返回，不执行后续逻辑
+      return;
     }
 
-    // 用户未同意，启动倒计时
     this.startCountdown();
   }
 
-  // 启动倒计时
   startCountdown(): void {
     this.countdown = 3;
     this.timerId = setInterval(() => {
@@ -57,7 +51,6 @@ struct Index {
     }, 1000);
   }
 
-  // 清除定时器
   clearTimer(): void {
     if (this.timerId) {
       clearInterval(this.timerId);
@@ -65,24 +58,18 @@ struct Index {
     }
   }
 
-  // 跳过等待，直接显示用户隐私保护
   skipWait(): void {
     this.clearTimer();
     this.isShow = true;
   }
 
-  // 处理同意后的状态重置
   handleAgree(): void {
-    // 先更新状态
     this.agreedState = UserConstants.AGREED_STATE[1];
     this.isShow = false;
     this.clearTimer();
     this.countdown = 0;
-
-    // 强制更新状态
     this.flag = false;
 
-    // 延迟跳转，确保状态更新完成
     setTimeout(() => {
       try {
         this.pathStack.replacePathByName(UserConstants.ROUTER[0], null)
@@ -93,8 +80,8 @@ struct Index {
   }
 
   aboutToDisappear(): void {
-    // 组件销毁时清理定时器
     this.clearTimer();
+    this.pathStack.clear()
   }
 
   build() {
@@ -109,7 +96,6 @@ struct Index {
         .width(UserConstants.FULL_PERCENT)
         .height(UserConstants.FULL_PERCENT)
 
-        // 右上角跳过按钮
         if (this.agreedState !== UserConstants.AGREED_STATE[1] && this.countdown > 0 && !this.isShow) {
           Button(`${this.countdown}秒跳过`)
             .fontSize('14fp')

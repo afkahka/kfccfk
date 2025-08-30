@@ -1,6 +1,6 @@
 ## 项目简介
 
-本项目为基于 OpenHarmony/ArkUI（ArkTS）的外卖/咖啡点餐类应用示例，包含启动页、登录、底部多 Tab 主页面、点餐下单、地址管理、结算支付、订单记录与会员中心等典型功能。以下说明基于仓库现有代码，力求客观、实事求是。
+本项目为基于 OpenHarmony/ArkUI（ArkTS）的外卖/咖啡点餐类应用示例，包含启动页、登录、底部多 Tab 主页面、点餐下单、地址管理、结算支付、订单记录、会员中心与每日签到等典型功能。以下说明基于仓库现有代码，力求客观、实事求是。
 
 ## 运行环境
 
@@ -59,12 +59,22 @@
 - 我的/会员中心（`view/MinePage.ets`）
   - 从 `LoginStateService` 读取用户昵称、手机号、头像与会员等级。
   - 通过 `RcpUtilsService` 获取会员等级、权益分类与权益清单，支持根据当前等级展示对应权益。
+  - **签到功能**：
+    - 每日签到获得随机雪王币奖励（10-50个）
+    - 每天只能签到一次，签到状态持久化存储
+    - 签到成功后弹窗显示获得的雪王币数量
+    - 签到按钮状态动态更新（未签到/已签到）
+    - 使用 `LoginStateService` 管理签到日期存储
 
 ## 核心服务
 
 - 登录状态服务（`common/service/LoginStateService.ets`）
   - 使用 `AppStorage` + `PersistentStorage` 维护登录态、最近账号、用户基本信息与会员等级。
   - 提供同步方法 `syncStorageData`，支持应用冷启动时的状态恢复；`isUserLoggedIn` 用于快速判断是否为已登录且存在有效用户 ID。
+  - **签到状态管理**：
+    - 新增 `setLastSignInDate()` 和 `getLastSignInDate()` 方法
+    - 使用 `KEY_LAST_SIGN_IN_DATE` 持久化存储签到日期
+    - 支持签到状态的跨会话保持
 
 - 结算服务（`common/service/CheckoutService.ets`）
   - 在结算前暂存地址、商品条目与金额，并生成订单号、取餐码与时间，供 `CheckoutPage` 与 `OrderService` 使用。
@@ -77,6 +87,9 @@
 
 - 业务数据工具（`common/service/RcpUtilsService.ets`）
   - 提供用户查询、商品/分类、地址、会员等级与权益等数据的获取与更新（具体数据源实现以现有代码为准）。
+  - **用户雪王币管理**：
+    - 通过 `incrementUserStats()` 方法支持雪王币的增量更新
+    - 签到功能调用此方法将随机获得的雪王币添加到用户账户
 
 ## 资源与配置
 
@@ -85,9 +98,13 @@
 
 ## 已知行为与限制（基于现有代码）
 
-- 支付为前端模拟流程：点击“确认支付”即生成订单记录并跳转详情，无真实支付对接。
+- 支付为前端模拟流程：点击"确认支付"即生成订单记录并跳转详情，无真实支付对接。
 - 登录依赖验证码校验服务与用户信息查询工具；具体校验逻辑与后端对接以现有实现为准。
 - 订单与地址等数据使用本地持久化（`AppStorage`/`PersistentStorage`），存在清理策略与时效性限制（如订单 7 天过期清理）。
+- **签到功能特性**：
+  - 签到状态基于本地日期判断，跨时区可能存在差异
+  - 雪王币奖励为随机生成（10-50个），无真实货币价值
+  - 签到数据持久化存储，应用重启后状态保持
 
 ## 目录索引（关键路径）
 
@@ -99,10 +116,25 @@
 - 地址：`entry/src/main/ets/view/AddressPage.ets`、`view/AddAddressPage.ets`，服务：`common/service/AddressEditService.ets`
 - 结算：`entry/src/main/ets/view/CheckoutPage.ets`，服务：`common/service/CheckoutService.ets`
 - 订单：`entry/src/main/ets/view/OrderListPage.ets`、`view/OrderDetailPage.ets`，服务：`common/service/OrderService.ets`
-- 我的：`entry/src/main/ets/view/MinePage.ets`
+- 我的：`entry/src/main/ets/view/MinePage.ets`（含签到功能）
+
+## 联动流程总结
+
+1. 用户点击左侧分类 → 触发 onClick 事件
+
+1. 更新状态 → activeCategoryId 改变，触发UI重新渲染
+
+1. 过滤商品 → 根据 parentId 匹配分类ID，筛选出对应商品
+
+1. 重建列表 → 调用 rebuildFlatList() 重新构建右侧列表数据
+
+1. 自动滚动 → 右侧列表自动滚动到选中分类的位置
+
+1. 视觉反馈 → 左侧选中项高亮显示，右侧显示对应商品
+
+这种设计模式在电商、外卖等应用中非常常见，通过状态管理和数据过滤实现了流畅的用户体验
 
 ## 构建与运行（简述）
 
 请使用 DevEco Studio 或命令行按 OpenHarmony/ArkUI 标准流程构建与运行本工程；依赖配置见仓库根目录与 `entry` 模块内的 `oh-package.json5`、`build-profile.json5` 等文件。
-
 

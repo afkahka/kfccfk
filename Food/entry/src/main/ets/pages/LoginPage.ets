@@ -4,70 +4,80 @@ import { RcpUtilsService, User } from "../common/service/RcpUtilsService"
 import { LoginStateService } from "../common/service/LoginStateService"
 
 @Builder
-export function LoginPageBuilder(){
+export function LoginPageBuilder() {
   LoginPage()
 }
 
 @Component
-export struct LoginPage{
+export struct LoginPage {
   @State account: string = ''
   @State isLoggedIn: boolean = false
   @State verificationCode: string = ''
   @State isLoading: boolean = false
   @State showProgress: boolean = false
-  @State loginProgress: number = 0 // 0~1
-  private progressTimer: number = 0
   @State showPassword: boolean = false
   @State countdown: number = 0
   @State canSendCode: boolean = true
   @State errorMessage: string = ''
   @State successMessage: string = ''
   @State userName: string = ''
-  @Consume('pathStack') pathStack:NavPathStack
+  @Consume('pathStack') pathStack: NavPathStack
 
   build() {
-    NavDestination(){
+    NavDestination() {
       Column() {
-        Image($r('app.media.logo'))
-          .width('100vp')
+        Image($r('app.media.logo_new'))
+          .width('200vp')
           .aspectRatio(1)
-          .margin({top:'50vp'})
+          .borderRadius("50%")
+          .margin({ top: '50vp' ,bottom:10})
         Text('遇见好时光')
 
         if (this.showProgress) {
-          Row(){
-            Blank().height(6).layoutWeight(1).backgroundColor('#F5CED0').borderRadius(3)
-            Row(){ Blank() }
-              .height(6)
-              .width(`${Math.round(this.loginProgress * 100)}%`)
-              .backgroundColor('#FF5252')
-              .borderRadius(3)
-              .position({ x: 0 })
+          Column() {
+            LoadingProgress()
+              .color('#FF5252')
+              .width(40)
+              .height(40)
+            Text('登录中...')
+              .fontSize(14)
+              .fontColor('#666666')
+              .margin({ top: 12 })
           }
-          .width('84%')
-          .margin({ top: 12 })
+          .margin({ top: 20 })
         }
 
         Column() {
-          if(this.errorMessage){
+          if (this.errorMessage) {
             Text(this.errorMessage)
               .fontSize(14)
               .fontColor('#FF3B30')
               .backgroundColor('#FFE5E5')
-              .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+              .padding({
+                left: 12,
+                right: 12,
+                top: 8,
+                bottom: 8
+              })
               .borderRadius(6)
               .margin({ bottom: 16 })
               .width('100%')
           }
 
-          if(this.successMessage){
+          if (this.successMessage) {
             Text(this.successMessage)
               .fontSize(14)
               .fontColor('#34C759')
               .backgroundColor('#E5F7E5')
-              .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+              .padding({
+                left: 12,
+                right: 12,
+                top: 8,
+                bottom: 8
+              })
               .borderRadius(6)
               .margin({ bottom: 16 })
+              .width('100%')
               .width('100%')
           }
 
@@ -137,7 +147,7 @@ export struct LoginPage{
                 .fontSize(14)
                 .fontColor(Color.White)
                 .enabled(this.canSendCode)
-                .onClick(()=>{
+                .onClick(() => {
                   this.sendVerificationCode()
                 })
             }
@@ -156,7 +166,7 @@ export struct LoginPage{
             .fontWeight(FontWeight.Medium)
             .fontColor(Color.White)
             .enabled(this.canLogin())
-            .onClick(()=>{
+            .onClick(() => {
               this.handleLogin()
             })
         }
@@ -177,7 +187,7 @@ export struct LoginPage{
             .fontColor('#999999')
             .margin({ bottom: 12 })
 
-          Row({space:30}) {
+          Row({ space: 30 }) {
             Button() {
               Image($r('app.media.wechat'))
                 .width(24)
@@ -187,7 +197,7 @@ export struct LoginPage{
             .height(44)
             .backgroundColor('#F5F5F5')
             .borderRadius(22)
-            .onClick(()=>{
+            .onClick(() => {
               this.wechatLogin()
             })
 
@@ -200,7 +210,7 @@ export struct LoginPage{
             .height(44)
             .backgroundColor('#F5F5F5')
             .borderRadius(22)
-            .onClick(()=>{
+            .onClick(() => {
               this.qqLogin()
             })
           }
@@ -231,7 +241,7 @@ export struct LoginPage{
       }
 
       const userExists = users.some(user => user.telephone === phoneNumber)
-      
+
       return userExists
     } catch (error) {
       return false
@@ -260,8 +270,9 @@ export struct LoginPage{
     }
 
     this.isLoading = true
-    this.startProgress()
+    this.showProgress = true
     this.canSendCode = false
+    this.clearMessages() // 清除之前的错误和成功信息
 
     try {
       const isValidPhone = await this.validatePhoneNumber(this.account)
@@ -273,10 +284,10 @@ export struct LoginPage{
 
       const result: SendResult = await VerificationCodeService.sendVerificationCode(this.account)
 
-      if(result.success){
+      if (result.success) {
         try {
           const user = await RcpUtilsService.getUserByPhone(this.account)
-          
+
           if (user && user.name) {
             this.userName = user.name
             this.successMessage = `${result.message}，${user.name}`
@@ -286,8 +297,8 @@ export struct LoginPage{
         } catch (error) {
           this.successMessage = result.message
         }
-        
-        if(result.code){
+
+        if (result.code) {
           this.successMessage += `，验证码：${result.code}`
         }
         this.startCountdown()
@@ -295,20 +306,20 @@ export struct LoginPage{
         this.errorMessage = result.message
         this.canSendCode = true
       }
-    }catch(error){
+    } catch (error) {
       this.errorMessage = '发送失败，请稍后重试'
       this.canSendCode = true
-    }finally{
+    } finally {
       this.isLoading = false
-      this.stopProgress()
+      this.showProgress = false
     }
   }
 
   startCountdown() {
     this.countdown = 60
-    const timer = setInterval(()=>{
+    const timer = setInterval(() => {
       this.countdown--
-      if(this.countdown <= 0){
+      if (this.countdown <= 0) {
         clearInterval(timer)
         this.canSendCode = true
       }
@@ -321,7 +332,7 @@ export struct LoginPage{
     }
 
     this.isLoading = true
-    this.startProgress()
+    this.showProgress = true
     this.clearMessages()
 
     try {
@@ -342,7 +353,7 @@ export struct LoginPage{
         let user: User | null = null
         try {
           user = await RcpUtilsService.getUserByPhone(this.account)
-          
+
           if (user && user.name) {
             this.userName = user.name
             this.successMessage = `登录成功！欢迎 ${user.name}`
@@ -362,6 +373,8 @@ export struct LoginPage{
             user.avatar || '',
             user.level_type ?? 0
           )
+
+
         } else {
           LoginStateService.setLastLoginAccount(this.account)
           LoginStateService.setIsLoggedIn(true)
@@ -375,36 +388,8 @@ export struct LoginPage{
       this.errorMessage = '登录失败，请稍后重试'
     } finally {
       this.isLoading = false
-      this.stopProgress()
-    }
-  }
-
-  startProgress() {
-    this.showProgress = true
-    this.loginProgress = 0.1
-    if (this.progressTimer) {
-      clearInterval(this.progressTimer)
-    }
-
-    this.progressTimer = setInterval(() => {
-      if (this.loginProgress < 0.9) {
-        this.loginProgress = Math.min(0.9, this.loginProgress + 0.05)
-      }
-    }, 120)
-  }
-
-  stopProgress() {
-    animateTo({ duration: 200, curve: Curve.EaseOut }, () => {
-      this.loginProgress = 1
-    })
-    setTimeout(() => {
       this.showProgress = false
-      this.loginProgress = 0
-      if (this.progressTimer) {
-        clearInterval(this.progressTimer)
-        this.progressTimer = 0
-      }
-    }, 220)
+    }
   }
 
   wechatLogin() {

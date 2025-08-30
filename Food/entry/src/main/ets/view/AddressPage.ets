@@ -61,14 +61,14 @@ export struct AddressPage {
           Text('选择收货地址')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
-            .fontColor(Color.White)
+            .fontColor(Color.Black)
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
         }
         .width('100%')
         .height(56 + this.getUIContext().px2vp(this.topSafeHeight))
         .padding({ left: 16, right: 16, top: this.getUIContext().px2vp(this.topSafeHeight) })
-        .backgroundColor('#8B4513')
+        .backgroundColor(Color.White)
 
         if (this.isLoading) {
           Column() {

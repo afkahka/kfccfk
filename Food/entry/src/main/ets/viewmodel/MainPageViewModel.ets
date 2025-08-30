@@ -49,7 +49,9 @@ export class MainPageViewModel {
   private mineIcon: MineIcon[] = [
     new MineIcon(1, $r('app.media.ic_setting'), '设置'),
     new MineIcon(2, $r('app.media.ic_privacy_policy'), '隐私政策'),
-    new MineIcon(3, $r('app.media.ic_help'), '帮助')
+    new MineIcon(3, $r('app.media.ic_help'), '帮助'),
+    new MineIcon(4, $r('app.media.ic_setting'), '其他'),
+
   ]
 
   getBannerImage() {

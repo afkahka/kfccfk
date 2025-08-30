@@ -194,8 +194,8 @@ CREATE TABLE `user`  (
 
 -- 示例用户
 INSERT INTO `user` (`id`,`name`,`telephone`,`avatar`,`level_type`) VALUES
-(1,'一只安慕嘻','15380979728','https://picsum.photos/150/150',NULL),
-(2,'喝口白桃呜龙','15996150127','https://picsum.photos/150/150',NULL),
+(1,'一只安慕嘻','15380979728','https://fastly.picsum.photos/id/1003/150/150.jpg?hmac=zY9_CZXKARGUzHCNnktbiH4XWSpm6_h_9zfQ5E7aquY',NULL),
+(2,'喝口白桃呜龙','15996150127','https://fastly.picsum.photos/id/1003/150/150.jpg?hmac=zY9_CZXKARGUzHCNnktbiH4XWSpm6_h_9zfQ5E7aquY',NULL),
 (3,'机械院小院草','15678971123','https://picsum.photos/150/150',NULL),
 (4,'瑞幸用户_09208','15380979711','https://picsum.photos/150/150',NULL)
 ON DUPLICATE KEY UPDATE name=VALUES(name), telephone=VALUES(telephone), avatar=VALUES(avatar);

@@ -64,6 +64,7 @@ export struct CheckoutPage {
   build() {
     NavDestination() {
       Column() {
+        // 顶部导航栏
         Row() {
           Image($r('app.media.back')).width(24).height(24).onClick(() => this.pathStack.pop())
           Text('订单结算')
@@ -77,168 +78,174 @@ export struct CheckoutPage {
         .padding({ left: 16, right: 16, top: this.getUIContext().px2vp(this.topSafeHeight) })
         .backgroundColor('#C8A07B')
 
-        Column() {
-          Text('配送')
-            .fontSize(18)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#8B5E3C')
-            .textAlign(TextAlign.Start)
-          Text(this.address ?
-            `${this.address.address}${this.address.house_number ? ' ' + this.address.house_number : ''}` :
-            '请选择收货地址')
-            .fontSize(16)
-            .fontColor('#222222')
-            .margin({ top: 8 })
-            .textAlign(TextAlign.Start)
-        }
-        .width('100%')
-        .padding(16)
-        .alignItems(HorizontalAlign.Start)
-        .backgroundColor(Color.White)
-        .border({ width: { bottom: 1 }, color: '#F0F0F0' })
+        // 可滚动内容区域
+        Scroll() {
+          Column() {
+            Column() {
+              Text('配送')
+                .fontSize(18)
+                .fontWeight(FontWeight.Medium)
+                .fontColor('#8B5E3C')
+                .textAlign(TextAlign.Start)
+              Text(this.address ?
+                `${this.address.address}${this.address.house_number ? ' ' + this.address.house_number : ''}` :
+                '请选择收货地址')
+                .fontSize(16)
+                .fontColor('#222222')
+                .margin({ top: 8 })
+                .textAlign(TextAlign.Start)
+            }
+            .width('100%')
+            .padding(16)
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor(Color.White)
+            .border({ width: { bottom: 1 }, color: '#F0F0F0' })
 
-        Column() {
-          ForEach(this.items.slice(0, this.isExpanded ? this.items.length : Math.min(2, this.items.length)),
-            (it: CheckoutItem) => {
-              Row() {
-                Image(it.image).width(56).height(56).borderRadius(8).objectFit(ImageFit.Cover)
-                Column() {
-                  Text(it.title).fontSize(16).fontColor('#222222')
-                  Text(`x ${it.count}`).fontSize(12).fontColor('#888888').margin({ top: 4 })
-                }.layoutWeight(1).margin({ left: 12 })
+            Column() {
+              ForEach(this.items.slice(0, this.isExpanded ? this.items.length : Math.min(2, this.items.length)),
+                (it: CheckoutItem) => {
+                  Row() {
+                    Image(it.image).width(56).height(56).borderRadius(8).objectFit(ImageFit.Cover)
+                    Column() {
+                      Text(it.title).fontSize(16).fontColor('#222222')
+                      Text(`x ${it.count}`).fontSize(12).fontColor('#888888').margin({ top: 4 })
+                    }.layoutWeight(1).margin({ left: 12 })
 
-                Text(`¥ ${it.price}`).fontSize(16).fontColor('#222222')
-              }
-              .width('100%')
-              .padding({
-                left: 16,
-                right: 16,
-                top: 12,
-                bottom: 12
-              })
-            })
-          if (this.items.length > 2) {
-            Row() {
-              Blank().layoutWeight(1)
-              Text(this.isExpanded ? '收起' : '查看更多')
-                .fontSize(14)
-                .fontColor('#666666')
-                .onClick(() => {
-                  this.isExpanded = !this.isExpanded
+                    Text(`¥ ${it.price}`).fontSize(16).fontColor('#222222')
+                  }
+                  .width('100%')
+                  .padding({
+                    left: 16,
+                    right: 16,
+                    top: 12,
+                    bottom: 12
+                  })
                 })
+              if (this.items.length > 2) {
+                Row() {
+                  Blank().layoutWeight(1)
+                  Text(this.isExpanded ? '收起' : '查看更多')
+                    .fontSize(14)
+                    .fontColor('#666666')
+                    .onClick(() => {
+                      this.isExpanded = !this.isExpanded
+                    })
+                }
+                .width('100%')
+                .padding({
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                  bottom: 8
+                })
+              }
+            }
+            .backgroundColor(Color.White)
+            .margin({ top: 10 })
+
+            Row() {
+              Text('优惠券').fontSize(16).fontColor('#222222')
+              Blank().layoutWeight(1)
+              Text('暂无可用').fontSize(14).fontColor('#BBBBBB')
             }
             .width('100%')
             .padding({
               left: 16,
               right: 16,
-              top: 8,
-              bottom: 8
+              top: 14,
+              bottom: 14
             })
-          }
-        }
-        .backgroundColor(Color.White)
-        .margin({ top: 10 })
+            .backgroundColor(Color.White)
+            .margin({ top: 8 })
 
-        Row() {
-          Text('优惠券').fontSize(16).fontColor('#222222')
-          Blank().layoutWeight(1)
-          Text('暂无可用').fontSize(14).fontColor('#BBBBBB')
-        }
-        .width('100%')
-        .padding({
-          left: 16,
-          right: 16,
-          top: 14,
-          bottom: 14
-        })
-        .backgroundColor(Color.White)
-        .margin({ top: 8 })
-
-        // 雪王币抵扣
-        Row() {
-          Row(){
-            Text('雪王币抵扣').fontSize(16).fontColor('#222222')
-            if (this.userCoins > 0) {
-              Text(`可用${this.userCoins}币，100币抵1元`).fontSize(12).fontColor('#999999').margin({ left: 8 })
-            } else {
-              Text('暂无可用').fontSize(12).fontColor('#BBBBBB').margin({ left: 8 })
+            // 雪王币抵扣
+            Row() {
+              Row(){
+                Text('迪奥币抵扣').fontSize(16).fontColor('#222222')
+                if (this.userCoins > 0) {
+                  Text(`可用${this.userCoins}币，100币抵1元`).fontSize(12).fontColor('#999999').margin({ left: 8 })
+                } else {
+                  Text('暂无可用').fontSize(12).fontColor('#BBBBBB').margin({ left: 8 })
+                }
+              }.layoutWeight(1)
+              Toggle({ type: ToggleType.Switch, isOn: this.useCoins })
+                .onChange((on:boolean)=>{
+                  this.useCoins = on && this.userCoins > 0
+                  this.recalcDiscount()
+                })
             }
-          }.layoutWeight(1)
-          Toggle({ type: ToggleType.Switch, isOn: this.useCoins })
-            .onChange((on:boolean)=>{
-              this.useCoins = on && this.userCoins > 0
-              this.recalcDiscount()
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+            .backgroundColor(Color.White)
+            .margin({ top: 8 })
+
+            Row() {
+              Blank().layoutWeight(1)
+              Text(`共${this.items.reduce((sum: number, it: CheckoutItem) => sum + it.count,
+                0)}件，合计 ¥ ${this.totalAmount.toFixed(2)}，抵扣 ¥ ${this.discountByCoins.toFixed(2)}`)
+                .fontSize(16)
+                .fontColor('#222222')
+            }
+            .width('100%')
+            .padding({
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: 12
             })
-        }
-        .width('100%')
-        .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-        .backgroundColor(Color.White)
-        .margin({ top: 8 })
+            .backgroundColor(Color.White)
+            .border({ width: { top: 1 }, color: '#F5F5F5' })
+            .margin({ bottom: 10 })
 
-        Row() {
-          Blank().layoutWeight(1)
-          Text(`共${this.items.reduce((sum: number, it: CheckoutItem) => sum + it.count,
-            0)}件，合计 ¥ ${this.totalAmount.toFixed(2)}，抵扣 ¥ ${this.discountByCoins.toFixed(2)}`)
-            .fontSize(16)
-            .fontColor('#222222')
-        }
-        .width('100%')
-        .padding({
-          left: 16,
-          right: 16,
-          top: 12,
-          bottom: 12
-        })
-        .backgroundColor(Color.White)
-        .border({ width: { top: 1 }, color: '#F5F5F5' })
-        .margin({ bottom: 10 })
-
-        Column() {
-          Text('支付方式').fontSize(16).fontColor('#222222').fontWeight(FontWeight.Medium).textAlign(TextAlign.Start)
-          Row() {
-            Row() {
-              Image($r('app.media.wechat')).width(22).height(22).objectFit(ImageFit.Contain)
-              Text('微信').fontSize(14).fontColor('#333333').margin({ left: 8 })
-            }
-            .alignItems(VerticalAlign.Center)
-            .layoutWeight(1)
-
-            Radio({ value: 'wechat', group: 'pay' })
-              .checked(this.payMethod === 'wechat')
-              .onChange((checked: boolean) => {
-                if (checked) {
-                  this.payMethod = 'wechat'
+            Column() {
+              Text('支付方式').fontSize(16).fontColor('#222222').fontWeight(FontWeight.Medium).textAlign(TextAlign.Start)
+              Row() {
+                Row() {
+                  Image($r('app.media.wechat')).width(22).height(22).objectFit(ImageFit.Contain)
+                  Text('微信').fontSize(14).fontColor('#333333').margin({ left: 8 })
                 }
-              })
-          }
-          .width('100%')
-          .margin({ top: 12 })
+                .alignItems(VerticalAlign.Center)
+                .layoutWeight(1)
 
-          Row() {
-            Row() {
-              Image($r('app.media.qq')).width(22).height(22).objectFit(ImageFit.Contain)
-              Text('支付宝').fontSize(14).fontColor('#333333').margin({ left: 8 })
-            }
-            .alignItems(VerticalAlign.Center)
-            .layoutWeight(1)
+                Radio({ value: 'wechat', group: 'pay' })
+                  .checked(this.payMethod === 'wechat')
+                  .onChange((checked: boolean) => {
+                    if (checked) {
+                      this.payMethod = 'wechat'
+                    }
+                  })
+              }
+              .width('100%')
+              .margin({ top: 12 })
 
-            Radio({ value: 'alipay', group: 'pay' })
-              .checked(this.payMethod === 'alipay')
-              .onChange((checked: boolean) => {
-                if (checked) {
-                  this.payMethod = 'alipay'
+              Row() {
+                Row() {
+                  Image($r('app.media.qq')).width(22).height(22).objectFit(ImageFit.Contain)
+                  Text('支付宝').fontSize(14).fontColor('#333333').margin({ left: 8 })
                 }
-              })
+                .alignItems(VerticalAlign.Center)
+                .layoutWeight(1)
+
+                Radio({ value: 'alipay', group: 'pay' })
+                  .checked(this.payMethod === 'alipay')
+                  .onChange((checked: boolean) => {
+                    if (checked) {
+                      this.payMethod = 'alipay'
+                    }
+                  })
+              }
+              .width('100%')
+              .margin({ top: 12 })
+            }
+            .width('100%').padding(16)
+            .backgroundColor(Color.White)
+            .margin({ top: 10, bottom: 20 })
           }
-          .width('100%')
-          .margin({ top: 12 })
         }
-        .width('100%').padding(16)
-        .backgroundColor(Color.White)
-        .margin({ top: 10 })
+        .layoutWeight(1)
+        .scrollBar(BarState.Off)
 
-        Blank().layoutWeight(1)
-
+        // 固定底部按钮
         Row() {
           Text(`实付: ¥ ${(Math.max(0, this.totalAmount - this.discountByCoins)).toFixed(2)}`).fontSize(16).fontColor('#222222')
           Blank().layoutWeight(1)

@@ -36,134 +36,144 @@ export struct OrderDetailPage {
         Column() {
           Row() {
             Image($r('app.media.back')).width(24).height(24).onClick(() => this.pathStack.pop())
+            Blank().layoutWeight(1)
+            Text(`订单已完成  取餐码：${this.pickupCode}`)
+              .fontSize(18)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(Color.White)
+            Blank().layoutWeight(1)
           }
           .width('100%')
+          .margin({ top: 10 })
+          .alignItems(VerticalAlign.Center)
 
-          Text(`订单已完成  取餐码：${this.pickupCode}`)
-            .fontSize(18)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(Color.White)
-            .textAlign(TextAlign.Center)
-            .margin({ top: 6 })
           Text('感谢您的购买，期待您的再次光临！')
             .fontSize(12)
             .fontColor('#F7EDE3')
             .textAlign(TextAlign.Center)
             .margin({ top: 6, bottom: 10 })
         }
-        .width('100%').height(86 + this.getUIContext().px2vp(this.topSafeHeight))
+        .width('100%').height(56+ this.getUIContext().px2vp(this.topSafeHeight))
         .padding({ left: 16, right: 16, top: this.getUIContext().px2vp(this.topSafeHeight) })
         .backgroundColor('#C8A07B')
 
-        Row() {
+        Scroll() {
           Column() {
             Row() {
-              Text('配送至')
-                .fontSize(14)
-                .fontColor('#8B5E3C')
-                .fontWeight(FontWeight.Medium)
+              Column() {
+                Row() {
+                  Text('配送至')
+                    .fontSize(14)
+                    .fontColor('#8B5E3C')
+                    .fontWeight(FontWeight.Medium)
+                }
+                .width('100%')
+
+                Text(this.address ?
+                  `${this.address.address}${this.address.house_number ? ' ' + this.address.house_number : ''}` : '')
+                  .fontSize(16)
+                  .fontColor('#222222')
+                  .fontWeight(FontWeight.Medium)
+                  .margin({ top: 6 })
+              }
+              .layoutWeight(1)
+              .padding(16)
+              .backgroundColor(Color.White)
+              .borderRadius(12)
+              .border({ width: 1, color: '#F0F0F0' })
             }
             .width('100%')
+            .padding({ top: 4 })
 
-            Text(this.address ?
-              `${this.address.address}${this.address.house_number ? ' ' + this.address.house_number : ''}` : '')
-              .fontSize(16)
-              .fontColor('#222222')
-              .fontWeight(FontWeight.Medium)
-              .margin({ top: 6 })
-          }
-          .layoutWeight(1)
-          .padding(16)
-          .backgroundColor(Color.White)
-          .borderRadius(12)
-          .border({ width: 1, color: '#F0F0F0' })
-        }
-        .width('100%')
-        .padding({ top: 12 })
+            Column() {
+              ForEach(this.items.slice(0, this.isExpanded ? this.items.length : Math.min(2, this.items.length)),
+                (it: CheckoutItemData) => {
+                  Row() {
+                    Image(it.image).width(56).height(56).borderRadius(8).objectFit(ImageFit.Cover)
+                    Column() {
+                      Text(it.title).fontSize(16).fontColor('#222222')
+                      Text('正常冰/正常糖').fontSize(12).fontColor('#888888').margin({ top: 4 })
+                      Text(`x ${it.count}`).fontSize(12).fontColor('#888888').margin({ top: 4 })
+                    }.layoutWeight(1).margin({ left: 12 })
 
-        Column() {
-          ForEach(this.items.slice(0, this.isExpanded ? this.items.length : Math.min(2, this.items.length)),
-            (it: CheckoutItemData) => {
-              Row() {
-                Image(it.image).width(56).height(56).borderRadius(8).objectFit(ImageFit.Cover)
-                Column() {
-                  Text(it.title).fontSize(16).fontColor('#222222')
-                  Text('正常冰/正常糖').fontSize(12).fontColor('#888888').margin({ top: 4 })
-                  Text(`x ${it.count}`).fontSize(12).fontColor('#888888').margin({ top: 4 })
-                }.layoutWeight(1).margin({ left: 12 })
-
-                Text(`¥ ${it.price}`).fontSize(16).fontColor('#222222')
-              }
-              .width('100%')
-              .padding({
-                left: 16,
-                right: 16,
-                top: 12,
-                bottom: 12
-              })
-            })
-          if (this.items.length > 2) {
-            Row() {
-              Blank().layoutWeight(1)
-              Text(this.isExpanded ? '收起' : '查看更多')
-                .fontSize(14)
-                .fontColor('#666666')
-                .onClick(() => {
-                  this.isExpanded = !this.isExpanded
+                    Text(`¥ ${it.price}`).fontSize(16).fontColor('#222222')
+                  }
+                  .width('100%')
+                  .padding({
+                    left: 16,
+                    right: 16,
+                    top: 12,
+                    bottom: 12
+                  })
                 })
+              if (this.items.length > 2) {
+                Row() {
+                  Blank().layoutWeight(1)
+                  Text(this.isExpanded ? '收起' : '查看更多')
+                    .fontSize(14)
+                    .fontColor('#666666')
+                    .onClick(() => {
+                      this.isExpanded = !this.isExpanded
+                    })
+                }
+                .width('100%')
+                .padding({
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                  bottom: 8
+                })
+              }
+            }
+            .backgroundColor(Color.White)
+            .margin({ top: 10 })
+
+            Row() {
+              Text('优惠券').fontSize(16).fontColor('#222222')
+              Blank().layoutWeight(1)
+              Text('-  ¥ 0').fontSize(16).fontColor('#C0C0C0')
             }
             .width('100%')
             .padding({
               left: 16,
               right: 16,
-              top: 8,
-              bottom: 8
+              top: 14,
+              bottom: 14
             })
+            .backgroundColor(Color.White)
+
+            Row() {
+              Blank().layoutWeight(1)
+              Text(`共${this.items.reduce((s: number, i: CheckoutItemData) => s + i.count,
+                0)}件， 微信  ¥ ${(Math.max(0, this.totalAmount - this.discountByCoins)).toFixed(2)}`)
+                .fontSize(16).fontColor('#222222')
+            }
+            .width('100%')
+            .padding({
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: 12
+            })
+            .backgroundColor(Color.White)
+            .margin({ bottom: 10 })
+
+            Column() {
+              this.infoRow('下单时间', this.formatTime(this.createdAt))
+              this.infoRow('订单号码', this.orderId)
+              this.infoRow('取餐码', this.pickupCode)
+              this.infoRow('是否打包', '需要打包袋')
+              this.infoRow('备注', '无')
+            }
+            .width('100%').padding(16)
+            .backgroundColor(Color.White)
+            .margin({ bottom: 20 })
           }
         }
-        .backgroundColor(Color.White)
-        .margin({ top: 10 })
+        .layoutWeight(1)
+        .scrollBar(BarState.Off)
 
-        Row() {
-          Text('优惠券').fontSize(16).fontColor('#222222')
-          Blank().layoutWeight(1)
-          Text('-  ¥ 0').fontSize(16).fontColor('#C0C0C0')
-        }
-        .width('100%')
-        .padding({
-          left: 16,
-          right: 16,
-          top: 14,
-          bottom: 14
-        })
-        .backgroundColor(Color.White)
-
-        Row() {
-          Blank().layoutWeight(1)
-          Text(`共${this.items.reduce((s: number, i: CheckoutItemData) => s + i.count,
-            0)}件， 微信  ¥ ${(Math.max(0, this.totalAmount - this.discountByCoins)).toFixed(2)}`)
-            .fontSize(16).fontColor('#222222')
-        }
-        .width('100%')
-        .padding({
-          left: 16,
-          right: 16,
-          top: 12,
-          bottom: 12
-        })
-        .backgroundColor(Color.White)
-        .margin({ bottom: 10 })
-
-        Column() {
-          this.infoRow('下单时间', this.formatTime(this.createdAt))
-          this.infoRow('订单号码', this.orderId)
-          this.infoRow('取餐码', this.pickupCode)
-          this.infoRow('是否打包', '需要打包袋')
-          this.infoRow('备注', '无')
-        }
-        .width('100%').padding(16)
-        .backgroundColor(Color.White)
-
+        // 固定底部按钮
         Row() {
           Blank().layoutWeight(1)
           Button('再来一单')
@@ -185,8 +195,8 @@ export struct OrderDetailPage {
         }
         .width('100%')
         .height(56 + this.getUIContext().px2vp(this.bottomSafeHeight))
-        .padding({ left: 16, right: 16, bottom: this.getUIContext().px2vp(this.bottomSafeHeight) })
-        .backgroundColor('#F5F5F5')
+        .padding({ left: 16, right: 16, bottom: this.getUIContext().px2vp(this.bottomSafeHeight) ,top:16})
+        .backgroundColor(Color.White)
       }
       .width('100%').height('100%')
       .backgroundColor('#F5F5F5')

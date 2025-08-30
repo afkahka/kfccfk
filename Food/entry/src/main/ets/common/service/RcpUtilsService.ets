@@ -50,7 +50,6 @@ export interface UserProfileUpdateData {
   coins?: number
   growth_value?: number
   level_type?: number
-  // 新增：后端支持的增量更新字段
   coins_delta?: number
   growth_delta?: number
 }
@@ -513,6 +512,9 @@ export class RcpUtilsService {
         return null
       }
       const user = users.find(user => user.telephone === phoneNumber)
+      
+
+      
       return user || null
     } catch (error) {
       return null
@@ -607,4 +609,6 @@ export class RcpUtilsService {
       throw new Error('上传头像失败')
     }
   }
+
+
 }
